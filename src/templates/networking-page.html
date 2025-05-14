@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConferenceHub Networking</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css ">
+  <link rel="stylesheet" href="../static/networking-page.css">
+  <meta name="csrf-token" content="${csrfToken}">
+  <style>
+    .loading { opacity: 0.5; pointer-events: none; }
+    .error-message { color: #ef4444; display: none; }
+    .success-message { color: #10b981; display: none; }
+  </style>
+</head>
+<body>
+  <!-- LinkedIn Modal -->
+  <div class="modal-overlay" id="linkedInModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeLinkedInModal()">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="session-card">
+        <div class="session-card-header">
+          <div class="session-icon">
+            <i class="fab fa-linkedin"></i>
+          </div>
+          <div class="session-info">
+            <div class="session-name" id="modalUserName"></div>
+            <div class="session-meta">
+              <span class="session-meta-item">
+                <i class="fas fa-briefcase"></i> 
+                <span id="modalUserTitle"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="session-description">
+          Would you like to view this user's LinkedIn profile?
+        </div>
+        <div class="session-footer">
+          <button class="btn btn-primary" id="viewLinkedInBtn">
+            <i class="fab fa-linkedin"></i> View Profile
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <nav class="nav-sidebar">
+    <div class="brand">
+      <i class="fas fa-video"></i>
+      <span>ConferenceHub</span>
+    </div>
+    <div class="nav-items">
+      <button class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item active">
+        <i class="fas fa-users"></i>
+        <span>Networking</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-video"></i>
+        <span>Sessions</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+        <div class="active-indicator"></div>
+      </button>
+    </div>
+    <div class="user-profile-sidebar">
+      <div class="profile-card">
+        <div class="profile-content">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name">John Doe</div>
+            <div class="user-email">john@example.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- Main Content -->
+  <main class="main-content" data-network-base="/api/network">
+    <div class="page-header">
+      <h1 class="page-title">Networking</h1>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar-container">
+      <input type="text" 
+             class="search-bar" 
+             data-search-endpoint="/api/network/search"
+             placeholder="Search for users by name, role, or company..." 
+             id="networkSearch">
+      <i class="fas fa-search search-icon"></i>
+      <div class="error-message" id="searchError"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="network-tabs">
+      <div class="network-tab" data-tab="requests" data-endpoint="/api/network/requests">
+        Requests <span class="badge" id="requestCount">3</span>
+      </div>
+      <div class="network-tab active" data-tab="connections" data-endpoint="/api/network/users">
+        Connections
+      </div>
+      <div class="network-tab" data-tab="blocked" data-endpoint="/api/network/blocked">
+        Blocked
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state" style="display: none;">
+      <i class="fas fa-spinner fa-spin"></i> Loading...
+    </div>
+
+    <!-- Tab Contents -->
+    <div class="tab-content" id="requests-tab">
+      <div id="requestsContainer" data-accept-endpoint="/api/network/accept" data-decline-endpoint="/api/network/decline"></div>
+    </div>
+
+    <div class="tab-content active" id="connections-tab">
+      <div class="users-grid" id="connectionsContainer" data-connect-endpoint="/api/network/connect" data-block-endpoint="/api/network/block"></div>
+    </div>
+
+    <div class="tab-content" id="blocked-tab">
+      <div id="blockedContainer" data-unblock-endpoint="/api/network/unblock"></div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="statusMessages" class="status-messages" style="display: none;">
+      <div class="success-message"></div>
+      <div class="error-message"></div>
+    </div>
+  </main>
+
+  <!-- User Card Template -->
+  <template id="userCardTemplate">
+    <div class="user-card">
+      <div class="user-card-avatar"><i class="fas fa-user-circle"></i></div>
+      <h3 class="user-card-name"></h3>
+      <p class="user-card-role"></p>
+      <div class="user-card-stats">
+        <div class="user-stat">
+          <div class="user-stat-value"></div>
+          <div class="user-stat-label">Sessions</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-value"></div>
+          <div class="user-stat-label">Connections</div>
+        </div>
+      </div>
+      <div class="user-card-actions">
+        <button class="action-button message-button">
+          <i class="fas fa-comment"></i>Message
+        </button>
+        <button class="action-button block-button" data-action="block">
+          <i class="fas fa-ban"></i>Block
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <script>
+            // Navigation functionality
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Remove active class from all items
+        document.querySelectorAll('.nav-item').forEach(nav => {
+          nav.classList.remove('active');
+        });
+        // Add active class to clicked item
+        item.classList.add('active');
+        
+        // Handle navigation
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        if (pageName === 'dashboard') {
+          window.location.href = 'dashboard.html';
+        } else if (pageName === 'networking') {
+          window.location.href = 'networking-page.html';
+        } else if (pageName === 'profile') {
+          window.location.href = 'profile.html';
+        } else if (pageName === 'sessions') {
+          window.location.href = 'sessions.html';
+        } else if (pageName === 'settings') {
+          window.location.href = 'settings.html';
+        }
+      });
+    });
+
+
+
+    // Utility functions
+    function sanitizeInput(input) {
+      return input.trim();
+    }
+
+    async function fetchWithProtection(url, options = {}) {
+      return fetch(url, {
+        ...options,
+        credentials: 'same-origin',
+        headers: {
+          ...options.headers,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Load connections on load
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchConnections();
+      fetchRequests();
+    });
+
+    // Fetch all connections
+    async function fetchConnections() {
+      try {
+        const res = await fetch('/api/network/users');
+        const users = await res.json();
+        renderConnections(users);
+      } catch (err) {
+        console.error('Failed to fetch connections:', err);
+      }
+    }
+
+    // Render connections into UI
+    function renderConnections(users) {
+      const container = document.getElementById('connectionsContainer');
+      container.innerHTML = '';
+      if (users.length === 0) {
+        container.innerHTML = `
+          <div class="no-results">
+            <i class="fas fa-user-friends empty-icon"></i>
+            <p>No connections yet</p>
+          </div>`;
+        return;
+      }
+
+      users.forEach(user => {
+        const card = document.createElement('div');
+        card.className = 'user-card';
+        card.innerHTML = `
+          <div class="user-card-avatar"><i class="fas fa-user-circle"></i></div>
+          <h3 class="user-card-name">${user.name}</h3>
+          <p class="user-card-role">${user.role}</p>
+          <div class="user-card-stats">
+            <div class="user-stat">
+              <div class="user-stat-value">${user.sessions || 0}</div>
+              <div class="user-stat-label">Sessions</div>
+            </div>
+            <div class="user-stat">
+              <div class="user-stat-value">${user.connections || 0}</div>
+              <div class="user-stat-label">Connections</div>
+            </div>
+          </div>
+          <div class="user-card-actions">
+            <button class="action-button message-button"><i class="fas fa-comment"></i>Message</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      addMessageHandlers();
+    }
+
+    // Fetch connection requests
+    async function fetchRequests() {
+      try {
+        const res = await fetch('/api/network/requests');
+        const requests = await res.json();
+        renderRequests(requests);
+      } catch (err) {
+        console.error('Failed to fetch requests:', err);
+      }
+    }
+
+    // Render requests into UI
+    function renderRequests(requests) {
+      const container = document.getElementById('requestsContainer');
+      container.innerHTML = '';
+      if (requests.length === 0) {
+        container.innerHTML = `
+          <div class="no-results">
+            <i class="fas fa-user-friends empty-icon"></i>
+            <p>No pending requests</p>
+          </div>`;
+        document.querySelector('.network-tab[data-tab="requests"] .badge').style.display = 'none';
+        return;
+      }
+
+      requests.forEach(req => {
+        const card = document.createElement('div');
+        card.className = 'request-card';
+        card.innerHTML = `
+          <div class="request-avatar"><i class="fas fa-user-circle"></i></div>
+          <div class="request-details">
+            <h3 class="request-name">${req.name}</h3>
+            <p class="request-role">${req.title}</p>
+            <p class="request-time">${req.time}</p>
+          </div>
+          <div class="request-actions">
+            <button class="request-button accept-button" onclick="acceptRequest('${req.id}')">Accept</button>
+            <button class="request-button decline-button" onclick="declineRequest('${req.id}')">Decline</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      updateRequestBadge();
+    }
+
+    // Accept request
+    async function acceptRequest(id) {
+      try {
+        await fetchWithProtection(`/api/network/accept/${id}`, { method: 'POST' });
+        fetchRequests();
+        fetchConnections();
+      } catch (err) {
+        console.error('Failed to accept request:', err);
+      }
+    }
+
+    // Decline request
+    async function declineRequest(id) {
+      try {
+        await fetchWithProtection(`/api/network/decline/${id}`, { method: 'POST' });
+        fetchRequests();
+      } catch (err) {
+        console.error('Failed to decline request:', err);
+      }
+    }
+
+    // Update request badge
+    function updateRequestBadge() {
+      const count = document.querySelectorAll('.request-card').length;
+      const badge = document.getElementById('requestCount');
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Search handler
+    const searchBar = document.getElementById('networkSearch');
+    let searchTimeout;
+    searchBar.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const term = sanitizeInput(this.value).toLowerCase();
+        filterUsers(term);
+      }, 300);
+    });
+
+    // Filter users based on search
+    function filterUsers(term) {
+      const cards = document.querySelectorAll('.user-card');
+      let visibleCount = 0;
+
+      cards.forEach(card => {
+        const name = card.querySelector('.user-card-name').textContent.toLowerCase();
+        const role = card.querySelector('.user-card-role').textContent.toLowerCase();
+        if (name.includes(term) || role.includes(term)) {
+          card.style.display = 'flex';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      const noResults = document.querySelector('.no-results');
+      if (visibleCount === 0 && !noResults) {
+        const message = document.createElement('div');
+        message.className = 'no-results';
+        message.innerHTML = '<i class="fas fa-search empty-icon"></i><p>No users found matching your search</p>';
+        document.getElementById('connections-tab').appendChild(message);
+      } else if (visibleCount > 0 && noResults) {
+        noResults.remove();
+      }
+    }
+
+    // Add click handlers for avatars and messages
+    function addMessageHandlers() {
+      document.querySelectorAll('.message-button').forEach(button => {
+        button.addEventListener('click', function() {
+          const userCard = this.closest('.user-card');
+          const userName = userCard.querySelector('.user-card-name').textContent;
+          const userRole = userCard.querySelector('.user-card-role').textContent;
+          const linkedInUrl = `https://linkedin.com/in/ ${userName.toLowerCase().replace(' ', '-')}`;
+          openLinkedInModal(userName, userRole, linkedInUrl);
+        });
+      });
+    }
+
+    // Modal control
+    function openLinkedInModal(userName, userTitle, linkedInUrl) {
+      document.getElementById('modalUserName').textContent = userName;
+      document.getElementById('modalUserTitle').textContent = userTitle;
+      document.getElementById('viewLinkedInBtn').onclick = () => {
+        window.open(linkedInUrl, '_blank');
+        closeLinkedInModal();
+      };
+      document.getElementById('linkedInModal').classList.add('active');
+    }
+
+    function closeLinkedInModal() {
+      document.getElementById('linkedInModal').classList.remove('active');
+    }
+
+    // Modal event listeners
+    document.getElementById('linkedInModal').addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) {
+        closeLinkedInModal();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeLinkedInModal();
+      }
+    });
+
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        const routes = {
+          dashboard: 'dashboard.html',
+          networking: 'networking-page.html',
+          profile: 'profile.html',
+          sessions: 'sessions.html',
+          settings: 'settings.html'
+        };
+        window.location.href = routes[pageName] || '#';
+      });
+    });
+
+    // Tab switching
+    document.querySelectorAll('.network-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.network-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+
+        const tabName = tab.getAttribute('data-tab');
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
