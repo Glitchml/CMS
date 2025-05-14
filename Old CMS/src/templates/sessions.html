@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sessions | ConferenceHub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="..\static\sessions.css">
+  <meta name="csrf-token" content="${csrfToken}">
+</head>
+<body class="is-admin">
+  <div class="modal-overlay" id="sessionModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="session-card">
+        <div class="session-card-header">
+          <div class="session-icon">
+            <i class="fas fa-chart-pie"></i>
+          </div>
+          <div class="session-info">
+            <div class="session-name" id="modalSessionName"></div>
+            <div class="session-meta">
+              <span class="session-meta-item" id="modalSessionTime"></span>
+              <span class="session-meta-item"><i class="fas fa-clock"></i> 60 min</span>
+            </div>
+          </div>
+        </div>
+        <div class="session-description" id="modalSessionDescription"></div>
+        <div class="session-tags" id="modalSessionTags"></div>
+        <div class="session-footer">
+          <div class="session-participants">
+            <div class="participant-avatar-small">
+              <i class="fas fa-user"></i>
+            </div>
+            <span class="participant-count">12 participants</span>
+          </div>
+          <button class="btn btn-primary">
+            <i class="fas fa-sign-in-alt"></i> Join Session
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-sidebar">
+    <div class="brand">
+      <i class="fas fa-video"></i>
+      <span>ConferenceHub</span>
+    </div>
+
+    <div class="nav-items">
+      <button class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Networking</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item active">
+        <i class="fas fa-video"></i>
+        <span>Sessions</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+        <div class="active-indicator"></div>
+      </button>
+    </div>
+
+    <div class="user-profile">
+      <div class="profile-card">
+        <div class="profile-content">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name">John Doe</div>
+            <div class="user-email">john@example.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Sessions</h1>
+      <p class="page-description">Join, manage, and create conference sessions</p>
+    </div>
+
+    <div class="tab-navigation">
+      <button class="tab-button active" data-tab="session-management">Session Management</button>
+      <button class="tab-button admin-tab" data-tab="user-management">User Management</button>
+    </div>
+
+    <div class="tab-content active" id="session-management">
+      <div class="filter-toolbar">
+        <div class="search-box">
+          <div class="search-input">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sessionSearch" placeholder="Search sessions..." autocomplete="off">
+            <div class="search-results" id="searchResults"></div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary admin-only" id="createSessionBtn">
+          <i class="fas fa-plus"></i> Create Session
+        </button>
+      </div>
+      
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon">
+          <i class="fas fa-search"></i>
+        </div>
+        <h3 class="empty-state-title">Search for sessions</h3>
+        <p class="empty-state-description">
+          Use the search box above to find sessions by name, category, or other keywords.
+        </p>
+      </div>
+      
+      <div class="pending-invites-section">
+        <h3 class="card-title"><i class="fas fa-envelope"></i> Pending Invites</h3>
+        
+        <div class="invite-item">
+          <div class="invite-info">
+            <div class="invite-title">Data Analysis Fundamentals</div>
+            <div class="invite-meta">From: Emily Rodriguez • May 5, 1:00 PM (60 min)</div>
+          </div>
+          <div class="invite-actions">
+            <button class="btn btn-primary">Accept</button>
+            <button class="btn btn-outline">Decline</button>
+          </div>
+        </div>
+        
+        <div class="invite-item">
+          <div class="invite-info">
+            <div class="invite-title">Customer Experience Workshop</div>
+            <div class="invite-meta">From: Alex Johnson • May 6, 10:00 AM (90 min)</div>
+          </div>
+          <div class="invite-actions">
+            <button class="btn btn-primary">Accept</button>
+            <button class="btn btn-outline">Decline</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title"><i class="fas fa-plus-circle"></i> Create New Session</h3>
+      
+      <div class="session-form" id="createSessionForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="input-label">Session Name*</label>
+            <input type="text" class="input" name="sessionName" required>
+            <div class="error-message" data-for="sessionName"></div>
+          </div>
+          <div class="form-group">
+            <label class="input-label">Duration (minutes)*</label>
+            <input type="number" class="input" name="duration" required min="1">
+            <div class="error-message" data-for="duration"></div>
+          </div>
+          <div class="form-group">
+            <label class="input-label">Max Participants</label>
+            <input type="number" class="input" placeholder="Enter maximum participants">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="input-label">Description</label>
+          <textarea class="input" rows="4" placeholder="Enter session description"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="input-label">Tags</label>
+          <input type="text" class="input" placeholder="Enter tags separated by commas">
+        </div>
+        
+        <div class="form-footer">
+          <button type="button" class="btn btn-outline" onclick="resetForm('createSessionForm')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Session</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title"><i class="fas fa-calendar-plus"></i> Schedule a Session</h3>
+      <div class="session-form" id="scheduleSessionForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="input-label">Session Name</label>
+            <input type="text" class="input" placeholder="Enter session name">
+          </div>
+          
+          <div class="form-group">
+            <label class="input-label">Date & Time</label>
+            <input type="datetime-local" class="input" placeholder="Select date and time">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="input-label">Invite Connections</label>
+          <div class="connection-list">
+            <div class="connection-item">
+              <input type="checkbox" id="sarah-johnson" value="sarah-johnson">
+              <label for="sarah-johnson">Sarah Johnson</label>
+            </div>
+            <div class="connection-item">
+              <input type="checkbox" id="michael-brown" value="michael-brown">
+              <label for="michael-brown">Michael Brown</label>
+            </div>
+            <div class="connection-item">
+              <input type="checkbox" id="emily-rodriguez" value="emily-rodriguez">
+              <label for="emily-rodriguez">Emily Rodriguez</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-footer">
+          <button type="button" class="btn btn-outline" onclick="resetForm('scheduleSessionForm')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Schedule Session</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="user-management">
+      <div class="card">
+        <h3 class="card-title"><i class="fas fa-user-tag"></i> Role Assignment</h3>
+        
+        <div class="grid grid-cols-2">
+          <div>
+            <div class="input-group">
+                <label class="input-label">Search Users</label>
+                <div class="search-input">
+                <i class="fas fa-search"></i>
+                <input type="text" class="input" placeholder="Type to search users...">
+                <div class="search-results">
+                    <div class="search-result-item">
+                    <div class="user-info">
+                      <img src="../static/avatars/user1.jpg" alt="User avatar" class="user-avatar">
+                      <div class="user-details">
+                      <div class="user-name">Sarah Johnson</div>
+                      <div class="user-role">Attendee</div>
+                      </div>
+                    </div>
+                    </div>
+                    <div class="search-result-item">
+                    <div class="user-info">
+                      <img src="../static/avatars/user2.jpg" alt="User avatar" class="user-avatar">
+                      <div class="user-details">
+                      <div class="user-name">Michael Brown</div>
+                      <div class="user-role">Speaker</div>
+                      </div>
+                    </div>
+                    </div>
+                    <div class="search-result-item">
+                    <div class="user-info">
+                      <img src="../static/avatars/user3.jpg" alt="User avatar" class="user-avatar">
+                      <div class="user-details">
+                      <div class="user-name">Emily Rodriguez</div>
+                      <div class="user-role">Admin</div>
+                      </div>
+                    </div>
+                    </div>
+                </div>
+                </div>
+                
+              </select>
+            </div>
+            
+            
+          
+          <div>
+            <div class="input-group">
+              <label class="input-label">Session</label>
+              <select class="input">
+                <option value="">Select session</option>
+                <option value="1">Marketing Strategies for 2025</option>
+                <option value="2">Future of Web Development</option>
+                <option value="3">Innovation Workshop</option>
+                <option value="4">Team Building Strategies</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">Session Role</label>
+              <select class="input">
+                <option value="">Select session role</option>
+                <option value="host">Host</option>
+                <option value="speaker">Speaker</option>
+                <option value="attendee">Attendee</option>
+              </select>
+            </div>
+            
+            <button class="btn btn-primary">Assign to Session</button>
+          </div>
+        </div>
+      </div>
+  </main>
+
+  <script>
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    
+    const securityUtils = {
+      sanitizeInput(input) {
+        return DOMPurify.sanitize(input);
+      },
+      
+      fetchWithProtection(url, options = {}) {
+        return fetch(url, {
+          ...options,
+          credentials: 'same-origin',
+          headers: {
+            ...options.headers,
+            'X-CSRF-Token': csrfToken,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    };
+
+    const formValidation = {
+      validateSessionForm(formData) {
+        const errors = {};
+        
+        if (!formData.get('sessionName')) {
+          errors.sessionName = 'Session name is required';
+        }
+        
+        const duration = parseInt(formData.get('duration'));
+        if (!duration || duration < 1) {
+          errors.duration = 'Duration must be a positive number';
+        }
+        
+        return errors;
+      },
+
+      displayErrors(formId, errors) {
+        const form = document.getElementById(formId);
+        form.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        
+        Object.entries(errors).forEach(([field, message]) => {
+          const errorEl = form.querySelector(`[data-for="${field}"]`);
+          if (errorEl) errorEl.textContent = message;
+        });
+      }
+    };
+
+    async function handleCreateSession(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      
+      const errors = formValidation.validateSessionForm(formData);
+      if (Object.keys(errors).length > 0) {
+        formValidation.displayErrors('createSessionForm', errors);
+        return;
+      }
+
+      try {
+        const response = await securityUtils.fetchWithProtection('/sessions', {
+          method: 'POST',
+          body: JSON.stringify(Object.fromEntries(formData))
+        });
+        
+        if (response.ok) {
+          resetForm('createSessionForm');
+        }
+      } catch (error) {
+        console.error('Failed to create session:', error);
+      }
+    }
+
+    function resetForm(formId) {
+      const form = document.getElementById(formId);
+      form.reset();
+      form.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+    }
+
+    document.getElementById('createSessionForm').addEventListener('submit', handleCreateSession);
+    document.getElementById('scheduleSessionForm').addEventListener('submit', handleScheduleSession);
+
+    async function fetchSessions(searchTerm) {
+      try {
+        const response = await securityUtils.fetchWithProtection(
+          `/sessions?search=${encodeURIComponent(searchTerm)}`
+        );
+        return await response.json();
+      } catch (error) {
+        console.error('Failed to fetch sessions:', error);
+        return [];
+      }
+    }
+
+    sessionSearch.addEventListener('input', async (e) => {
+      const searchTerm = securityUtils.sanitizeInput(e.target.value.toLowerCase());
+    });
+
+    const sessions = [
+      { 
+        name: 'Marketing Strategies for 2025',
+        category: 'Marketing',
+        time: 'Today, 10:00 AM',
+        description: 'Explore cutting-edge marketing approaches and technologies that will define success in 2025.',
+        tags: ['Marketing', 'Strategy', 'Innovation']
+      },
+      { 
+        name: 'Future of Web Development',
+        category: 'Technology',
+        time: 'Tomorrow, 2:00 PM',
+        description: 'Discover the latest trends and technologies shaping the future of web development.',
+        tags: ['Web Dev', 'Technology', 'Coding']
+      },
+      { 
+        name: 'Innovation Workshop',
+        category: 'Leadership',
+        time: 'May 2, 11:00 AM',
+        description: 'Learn innovative approaches to problem-solving and leadership.',
+        tags: ['Leadership', 'Innovation', 'Workshop']
+      },
+      { 
+        name: 'Team Building Strategies',
+        category: 'HR',
+        time: 'May 3, 3:00 PM',
+        description: 'Effective strategies for building and managing high-performing teams.',
+        tags: ['HR', 'Management', 'Team Building']
+      }
+    ];
+
+    function selectSession(sessionName) {
+      const session = sessions.find(s => s.name === sessionName);
+      if (!session) return;
+
+      document.getElementById('modalSessionName').textContent = session.name;
+      document.getElementById('modalSessionTime').innerHTML = `
+        <i class="fas fa-calendar"></i> ${session.time}
+      `;
+      
+      document.getElementById('modalSessionDescription').textContent = session.description;
+      
+      const tagsHTML = session.tags.map(tag => 
+        `<div class="session-tag">${tag}</div>`
+      ).join('');
+      document.getElementById('modalSessionTags').innerHTML = tagsHTML;
+
+      const joinButton = document.querySelector('.session-card .btn-primary');
+      joinButton.onclick = () => {
+        window.open('active-session.html', '_blank');
+      };
+
+      document.getElementById('sessionModal').classList.add('active');
+      searchResults.style.display = 'none';
+    }
+
+    function closeModal() {
+      document.getElementById('sessionModal').classList.remove('active');
+    }
+
+    document.getElementById('sessionModal').addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+
+    document.getElementById('createSessionBtn').addEventListener('click', () => {
+      const sessionForm = document.querySelector('.session-form');
+      sessionForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    const sessionSearch = document.getElementById('sessionSearch');
+    const searchResults = document.getElementById('searchResults');
+    
+    sessionSearch.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      
+      if (searchTerm.length < 1) {
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
+        return;
+      }
+
+      const filteredSessions = sessions.filter(session => 
+        session.name.toLowerCase().includes(searchTerm) ||
+        session.category.toLowerCase().includes(searchTerm)
+      );
+
+      if (filteredSessions.length > 0) {
+        searchResults.innerHTML = filteredSessions.map(session => `
+          <div class="search-result-item" onclick="selectSession('${session.name}')">
+            <div class="result-main">
+              <i class="fas fa-calendar-alt"></i>
+              <div class="result-info">
+                <div class="result-name">${session.name}</div>
+                <div class="result-meta">${session.category} • ${session.time}</div>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right"></i>
+          </div>
+        `).join('');
+        searchResults.style.display = 'block';
+      } else {
+        searchResults.innerHTML = `
+          <div class="search-result-empty">
+            <i class="fas fa-search"></i>
+            <span>No sessions found</span>
+          </div>
+        `;
+        searchResults.style.display = 'block';
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-box')) {
+        searchResults.style.display = 'none';
+      }
+    });
+
+    const users = [
+      { name: 'Sarah Johnson', role: 'Attendee', avatar: '../static/avatars/user1.jpg' },
+      { name: 'Michael Brown', role: 'Speaker', avatar: '../static/avatars/user2.jpg' },
+      { name: 'Emily Rodriguez', role: 'Admin', avatar: '../static/avatars/user3.jpg' }
+    ];
+
+    const userSearchInput = document.querySelector('.input-group .search-input input');
+    const userSearchResults = document.querySelector('.input-group .search-results');
+
+    userSearchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      if (searchTerm.length < 1) {
+        userSearchResults.style.display = 'none';
+        return;
+      }
+
+      const filteredUsers = users.filter(user => 
+        user.name.toLowerCase().includes(searchTerm) ||
+        user.role.toLowerCase().includes(searchTerm)
+      );
+      
+      userSearchResults.style.display = 'block';
+      if (filteredUsers.length > 0) {
+        userSearchResults.innerHTML = filteredUsers.map(user => `
+          <div class="search-result-item">
+            <div class="user-info">
+              <img src="${user.avatar}" alt="User avatar" class="user-avatar">
+              <div class="user-details">
+                <div class="user-name">${user.name}</div>
+                <div class="user-role">${user.role}</div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    });
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        
+        if (pageName === 'dashboard') {
+          window.location.href = 'dashboard.html';
+        } else if (pageName === 'networking') {
+          window.location.href = 'networking-page.html';
+        } else if (pageName === 'profile') {
+          window.location.href = 'profile.html';
+        } else if (pageName === 'sessions') {
+          window.location.href = 'sessions.html';
+        } else if (pageName === 'settings') {
+          window.location.href = 'settings.html';
+        }
+      });
+    });
+
+    document.querySelectorAll('.tab-button').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        
+        button.classList.add('active');
+        const tabId = button.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+    
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(nav => {
+          nav.classList.remove('active');
+        });
+        item.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

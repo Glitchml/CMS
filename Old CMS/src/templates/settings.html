@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - ConferenceHub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../static/settings.css">
+</head>
+<body>
+  <nav class="nav-sidebar">
+    <div class="brand">
+      <i class="fas fa-video"></i>
+      <span>ConferenceHub</span>
+    </div>
+
+    <div class="nav-items">
+      <button class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Networking</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-video"></i>
+        <span>Sessions</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item active">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+        <div class="active-indicator"></div>
+      </button>
+    </div>
+
+    <div class="user-profile">
+      <div class="profile-card">
+        <div class="profile-content">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name">John Doe</div>
+            <div class="user-email">john@example.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <h1 class="page-title">Settings</h1>
+    
+    <div class="settings-container">
+      <!-- Profile Settings -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <i class="fas fa-user-edit"></i>
+          <h2>Profile Info</h2>
+        </div>
+        <div class="form-group">
+          <label for="name">Job Title</label>
+          <input type="text" id="name" class="form-control" placeholder="Manager, Direcotor, e.t.c">
+        </div>
+        <div class="form-group">
+          <label for="email">Company</label>
+          <input type="email" id="email" class="form-control" >
+        </div>
+        <div class="form-group">
+          <label for="linkedin">Location</label>
+          <input type="url" id="linkedin" class="form-control" placeholder="https://www.linkedin.com/in/yourprofile">
+        </div>
+        
+      </div>
+      <div class="settings-container">
+
+        <!-- Profile Settings -->
+        <div class="settings-card">
+          <div class="settings-header">
+            <i class="fas fa-user-edit"></i>
+            <h2>Profile Settings</h2>
+          </div>
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" class="form-control" value="John Doe">
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" class="form-control" value="john@example.com">
+          </div>
+          <div class="form-group">
+            <label for="linkedin">LinkedIn Profile</label>
+            <input type="url" id="linkedin" class="form-control" placeholder="https://www.linkedin.com/in/yourprofile">
+          </div>
+          <div class="form-group">
+            <label for="current-password">Current Password</label>
+            <input type="password" id="current-password" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="new-password">New Password</label>
+            <input type="password" id="new-password" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="confirm-password">Confirm New Password</label>
+            <input type="password" id="confirm-password" class="form-control">
+          </div>
+        </div>
+      <!-- Appearance Settings -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <i class="fas fa-palette"></i>
+          <h2>Appearance</h2>
+        </div>
+        <div class="toggle-container">
+          <span class="toggle-label">Dark Mode</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="dark-mode-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Notification Settings -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <i class="fas fa-bell"></i>
+          <h2>Notification Preferences</h2>
+        </div>
+        <div class="toggle-container">
+          <span class="toggle-label">Email Notifications</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="email-notifications" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-container">
+          <span class="toggle-label">Session Reminders</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="session-reminders" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-container">
+          <span class="toggle-label">New Messages</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="new-messages" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      
+
+      <!-- Sign Out Section -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <i class="fas fa-sign-out-alt"></i>
+          <h2>Sign Out</h2>
+        </div>
+        <p style="color: #9ca3af; margin-bottom: 1rem;">
+          Sign out of your account on this device
+        </p>
+        <button class="btn btn-danger" id="signOutBtn" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; width: 100%;">
+          <i class="fas fa-sign-out-alt"></i> Sign Out
+        </button>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="button-group">
+        <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="save-btn">Save Changes</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sign Out Modal -->
+  <div id="signOutModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: rgba(26, 26, 26, 0.95); backdrop-filter: blur(16px); padding: 2rem; border-radius: 1rem; width: 90%; max-width: 400px; text-align: center;">
+      <div class="modal-icon" style="color: #357AFF; font-size: 2rem; margin-bottom: 1rem;">
+        <i class="fas fa-sign-out-alt"></i>
+      </div>
+      <h3 style="color: white; font-size: 1.25rem; margin-bottom: 1rem;">Sign Out</h3>
+      <p style="color: #9ca3af; margin-bottom: 1.5rem;">Are you sure you want to sign out of your account?</p>
+      <div style="display: flex; gap: 1rem;">
+        <button id="cancelSignOut" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+        <button id="confirmSignOut" class="btn btn-primary" style="flex: 1; background: #ef4444;">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mock data structure for backend reference
+    const mockSettingsData = {
+      profile: {
+        id: "usr_123",
+        name: "John Doe",
+        email: "john@example.com",
+        darkMode: true,
+        notifications: {
+          email: true,
+          sessions: true,
+          messages: true
+        },
+        privacy: {
+          showOnlineStatus: true,
+          shareActivity: false
+        }
+      }
+    };
+
+    /* Required Backend APIs:
+     * GET    /api/settings/{userId} - Get user settings
+     * PUT    /api/settings/profile - Update profile settings
+     * PUT    /api/settings/password - Update password
+     * PUT    /api/settings/notifications - Update notification settings
+     * PUT    /api/settings/privacy - Update privacy settings
+     * PUT    /api/settings/theme - Update theme preference
+     */
+
+    // Load settings on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // @TODO: Replace with actual API call
+        // const response = await fetch(`/api/settings/${userId}`);
+        loadSettings(mockSettingsData.profile);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    });
+
+    // Save settings functionality
+    document.getElementById('save-btn').addEventListener('click', async () => {
+      try {
+        const settings = {
+          profile: {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value
+          },
+          password: {
+            current: document.getElementById('current-password').value,
+            new: document.getElementById('new-password').value,
+            confirm: document.getElementById('confirm-password').value
+          },
+          preferences: {
+            darkMode: document.getElementById('dark-mode-toggle').checked,
+            notifications: {
+              email: document.getElementById('email-notifications').checked,
+              sessions: document.getElementById('session-reminders').checked,
+              messages: document.getElementById('new-messages').checked
+            },
+            privacy: {
+              onlineStatus: document.getElementById('online-status').checked,
+              activityHistory: document.getElementById('activity-history').checked
+            }
+          }
+        };
+
+        // @TODO: Replace with actual API calls
+        // await Promise.all([
+        //   fetch('/api/settings/profile', {...}),
+        //   fetch('/api/settings/password', {...}),
+        //   fetch('/api/settings/notifications', {...}),
+        //   fetch('/api/settings/privacy', {...})
+        // ]);
+
+        alert('Settings saved successfully!');
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        alert('Failed to save settings. Please try again.');
+      }
+    });
+
+    // Navigation functionality
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Remove active class from all items
+        document.querySelectorAll('.nav-item').forEach(nav => {
+          nav.classList.remove('active');
+        });
+        // Add active class to clicked item
+        item.classList.add('active');
+        
+        // Handle navigation
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        if (pageName === 'dashboard') {
+          window.location.href = 'dashboard.html';
+        } else if (pageName === 'networking') {
+          window.location.href = 'networking-page.html';
+        } else if (pageName === 'profile') {
+          window.location.href = 'profile.html';
+        } else if (pageName === 'sessions') {
+          window.location.href = 'sessions.html';
+        } else if (pageName === 'settings') {
+          window.location.href = 'settings.html';
+        }
+      });
+    });
+
+    // Cancel button functionality
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      // Reload the page to reset form values
+      window.location.reload();
+    });
+
+    // Theme toggle functionality
+    document.getElementById('dark-mode-toggle').addEventListener('change', function() {
+      // In a real app, you'd implement theme switching logic here
+      console.log('Dark mode:', this.checked ? 'enabled' : 'disabled');
+    });
+
+    // Sign Out Functionality
+    const signOutModal = document.getElementById('signOutModal');
+    const signOutBtn = document.getElementById('signOutBtn');
+    const cancelSignOut = document.getElementById('cancelSignOut');
+    const confirmSignOut = document.getElementById('confirmSignOut');
+
+    signOutBtn.addEventListener('click', () => {
+      signOutModal.style.display = 'flex';
+    });
+
+    cancelSignOut.addEventListener('click', () => {
+      signOutModal.style.display = 'none';
+    });
+
+    confirmSignOut.addEventListener('click', async () => {
+      try {
+        // @TODO: Replace with actual API call
+        // await fetch('/api/auth/signout', { method: 'POST' });
+        
+        // Clear any stored tokens/data
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Redirect to landing page
+        window.location.href = 'landing.html';
+      } catch (error) {
+        console.error('Sign out failed:', error);
+      }
+    });
+
+    // Close modal when clicking outside
+    signOutModal.addEventListener('click', (e) => {
+      if (e.target === signOutModal) {
+        signOutModal.style.display = 'none';
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && signOutModal.style.display === 'flex') {
+        signOutModal.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

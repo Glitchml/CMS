@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Session | ConferenceHub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="..\static\sessions.css">
+</head>
+<body>
+  <!-- Main content -->
+  <main class="main-content">
+    <!-- Active Session Content -->
+    <div class="card">
+      <h3 class="card-title"><i class="fas fa-video"></i> Marketing Strategies for 2025</h3>
+
+      <!-- Countdown Timer Section -->
+      <div style="margin-bottom: 1rem; text-align: center;">
+        <h4 id="countdownTimer" class="card-title" style="color: #357AFF;"><i class="fas fa-clock"></i> Time Remaining: --:--</h4>
+      </div>
+
+      <div class="session-layout">
+        <div>
+          <!-- Submit Question Section -->
+          <div class="qa-section">
+            <h4 class="card-title"><i class="fas fa-question-circle"></i> Ask a Question</h4>
+            <form id="questionForm" class="session-form">
+              <div class="form-group">
+                <label class="input-label">Your Name (optional)</label>
+                <input type="text" class="input" placeholder="Enter your name (optional)" id="userName"/>
+              </div>
+              <div class="form-group">
+                <label class="input-label">Your Question</label>
+                <textarea class="input" rows="4" id="userQuestion" placeholder="Type your question here..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Submit Question</button>
+            </form>
+          </div>
+
+          <!-- Session Controls -->
+          <div class="session-controls">
+            <button class="control-button">
+              <i class="fas fa-desktop"></i>
+              <span>Share</span>
+            </button>
+            <button class="control-button">
+              <i class="fas fa-phone-slash"></i>
+              <span>Leave</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Participants List -->
+        <div class="card participant-list">
+          <h4 class="card-title"><i class="fas fa-users"></i> Participants (12)</h4>
+          <div class="participant">
+            <div class="participant-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name">Sarah Johnson</div>
+              <div class="participant-role">Host • Speaking</div>
+            </div>
+            <button class="participant-actions">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+          <div class="participant">
+            <div class="participant-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name">Michael Brown</div>
+              <div class="participant-role">Co-host</div>
+            </div>
+            <button class="participant-actions">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+          <div class="participant">
+            <div class="participant-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name">Lisa Chen</div>
+              <div class="participant-role">Speaker</div>
+            </div>
+            <button class="participant-actions">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+          <div class="participant">
+            <div class="participant-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name">David Wilson</div>
+              <div class="participant-role">Attendee</div>
+            </div>
+            <button class="participant-actions">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+          <div class="participant">
+            <div class="participant-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name">Jennifer Park</div>
+              <div class="participant-role">Attendee</div>
+            </div>
+            <button class="participant-actions">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+          <div class="participant">
+            <div class="participant-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name">Robert Taylor</div>
+              <div class="participant-role">Attendee</div>
+            </div>
+            <button class="participant-actions">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Mock data structure for backend reference
+    const mockSessionData = {
+      session: {
+        id: "ses_123",
+        title: "Marketing Strategies for 2025",
+        status: "live",
+        startTime: "2024-01-20T10:00:00Z",
+        duration: 60,
+        participants: [
+          { id: "usr_1", name: "Sarah Johnson", role: "host", status: "speaking" },
+          { id: "usr_2", name: "Michael Brown", role: "co-host", status: "listening" },
+          { id: "usr_3", name: "Lisa Chen", role: "speaker", status: "waiting" }
+        ]
+      }
+    };
+
+    /* Required Backend APIs:
+     * POST /api/session/question - Submit a question
+     * POST /api/session/leave - Leave session
+     */
+
+    // Handle question submission
+    document.getElementById('questionForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById('userName').value.trim();
+      const question = document.getElementById('userQuestion').value.trim();
+
+      if (!question) {
+        alert("Please enter a question.");
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/session/question', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: name || "Anonymous",
+            question: question
+          })
+        });
+
+        if (response.ok) {
+          alert("Your question has been submitted!");
+          document.getElementById('userQuestion').value = '';
+        } else {
+          alert("Failed to submit question.");
+        }
+      } catch (error) {
+        console.error("Error submitting question:", error);
+        alert("Could not submit your question at this time.");
+      }
+    });
+
+    // Leave session handler
+    document.querySelector('.control-button:nth-child(2)').addEventListener('click', async () => {
+      try {
+        // @TODO: Replace with actual API call
+        // await fetch('/api/session/leave', ...);
+        window.close();
+      } catch (error) {
+        console.error('Failed to leave session:', error);
+      }
+    });
+
+    // 🔥 Countdown Timer Logic
+    const endTime = new Date(mockSessionData.session.startTime);
+    endTime.setMinutes(endTime.getMinutes() + mockSessionData.session.duration);
+
+    function updateCountdown() {
+      const now = new Date();
+      const diff = endTime - now;
+
+      if (diff <= 0) {
+        document.getElementById('countdownTimer').textContent = "This session has ended.";
+        clearInterval(timerInterval);
+        return;
+      }
+
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      document.getElementById('countdownTimer').textContent =
+        `Time Remaining: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    updateCountdown(); // Initial call
+    const timerInterval = setInterval(updateCountdown, 1000); // Update every second
+
+    // ✅ Participant Avatar Click Handler
+    document.querySelectorAll('.participant-avatar').forEach(avatar => {
+      avatar.style.cursor = 'pointer';
+      avatar.addEventListener('click', function () {
+        const userName = this.closest('.participant')
+          .querySelector('.participant-name').textContent;
+        const userId = encodeURIComponent(userName.toLowerCase().replace(' ', '-'));
+        window.open(`clicked-profile.html?userId=${userId}`, '_blank');
+      });
+    });
+  </script>
+</body>
+</html>

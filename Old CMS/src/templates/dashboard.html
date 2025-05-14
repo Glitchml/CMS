@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConferenceHub Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../static/dashboard.css">
+</head>
+<body>
+  <nav class="nav-sidebar">
+    <div class="brand">
+      <i class="fas fa-video"></i>
+      <span>ConferenceHub</span>
+    </div>
+
+    <div class="nav-items">
+      <button class="nav-item active">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Networking</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-video"></i>
+        <span>Sessions</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+        <div class="active-indicator"></div>
+      </button>
+    </div>
+
+    <div class="user-profile">
+      <div class="profile-card">
+        <div class="profile-content">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name">John Doe</div>
+            <div class="user-email">john@example.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="dashboard">
+    <!-- @TODO: Backend - Fetch user data from /api/user/{id} -->
+    <section class="welcome-section">
+      <h1 class="welcome-title">Welcome back, John!</h1>
+      <p class="welcome-subtitle">Here's an overview of your conference activity</p>
+    </section>
+
+    <!-- @TODO: Backend - Fetch sessions from /api/sessions -->
+    <section class="sessions-section">
+      <div class="section-header">
+        <h2 class="section-title">Recent Sessions</h2>
+      </div>
+      
+      <!-- @TODO: Backend - Implement real-time status updates via WebSocket -->
+      <div class="sessions-list">
+        <!-- Session cards will be dynamically generated -->
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            // No need to manually add token, it's in the cookie
+            const response = await fetch('/api/protected', {
+                method: 'GET',
+                credentials: 'include',  // Important: include cookies
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Unauthorized');
+            }
+
+            const userData = await response.json();
+            
+            // Update user information
+            document.querySelector('.user-name').textContent = userData.user.username;
+            document.querySelector('.user-email').textContent = userData.user.email;
+            document.querySelector('.welcome-title').textContent = `Welcome back, ${userData.user.username}!`;
+
+        } catch (error) {
+            console.error('Authentication failed:', error);
+            window.location.href = '/login';
+        }
+
+        // Existing navigation event listeners...
+    });
+
+    // Add a logout function
+    function logout() {
+        const accessToken = localStorage.getItem('access_token');
+        
+        fetch('http://localhost:5000/api/auth/logout', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // Clear tokens
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                // Redirect to login
+                window.location.href = '/login/';
+            }
+        })
+        .catch(error => {
+            console.error('Logout failed:', error);
+        });
+    }
+
+    // Add logout button event listener
+    document.querySelector('.user-profile').addEventListener('click', () => {
+        const confirmLogout = confirm('Are you sure you want to log out?');
+        if (confirmLogout) {
+            logout();
+        }
+    });
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        
+        /* 
+         * @TODO: Backend Integration Points:
+         * - Implement session middleware to check auth status
+         * - Add CSRF protection for page transitions
+         * - Track user navigation analytics
+         */
+        // Handle navigation
+        if (pageName === 'dashboard') {
+          window.location.href = 'dashboard.html';
+        } else if (pageName === 'networking') {
+          window.location.href = 'networking-page.html';
+        } else if (pageName === 'profile') {
+          window.location.href = 'profile.html';
+        } else if (pageName === 'sessions') {
+          window.location.href = 'sessions.html';
+        } else if (pageName === 'settings') {
+          window.location.href = 'settings.html';
+        }
+      });
+    });
+
+    /* Required Backend APIs:
+     * GET  /api/user/{id} - Get user profile
+     * GET  /api/sessions - Get all sessions
+     * GET  /api/sessions/{id} - Get specific session
+     * POST /api/sessions/{id}/join - Join a session
+     * WS   /ws/sessions - Real-time session updates
+     */
+  </script>
+</body>
+</html>
