@@ -2,39 +2,6 @@
 
 This project is a backend implementation for a Conference Management System using Flask. It provides various features for managing user authentication, sessions, user profiles, networking, analytics, and more.
 
-## Project Structure
-
-```
-conference-management-system
-├── src
-│   ├── api
-│   │   ├── __init__.py
-│   │   ├── auth.py
-│   │   ├── sessions.py
-│   │   ├── users.py
-│   │   ├── connections.py
-│   │   └── analytics.py
-│   ├── models
-│   │   ├── __init__.py
-│   │   ├── user.py
-│   │   ├── session.py
-│   │   └── connection.py
-│   ├── services
-│   │   ├── __init__.py
-│   │   ├── auth_service.py
-│   │   └── websocket_service.py
-│   ├── utils
-│   │   ├── __init__.py
-│   │   └── security.py
-│   ├── config.py
-│   └── app.py
-├── tests
-│   ├── __init__.py
-│   ├── test_auth.py
-│   └── test_sessions.py
-├── requirements.txt
-└── README.md
-```
 
 ## Features
 
@@ -44,6 +11,8 @@ conference-management-system
 - **Networking**: Features for managing user connections and direct messaging.
 - **Analytics**: Collection and reporting of user engagement and session attendance data.
 - **Real-time Features**: WebSocket support for live interactions during sessions.
+- **Database Configuration**: SQLAlchemy ORM with Alembic for database migrations.
+- **File Uploads**: Image upload support using Pillow library.
 
 ## Installation
 
@@ -53,9 +22,25 @@ conference-management-system
    cd conference-management-system
    ```
 
-2. Install the required packages:
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   ```
+
+3. Install the required packages:
    ```bash
    pip install -r requirements.txt
+   ```
+
+4. Set up environment variables:
+   Create a `.env` file in the root directory with the following contents:
+   ```
+   FLASK_APP=src/app.py
+   FLASK_ENV=development
+   DATABASE_URI=sqlite:///conference.db
+   JWT_SECRET_KEY=your_secret_key_here
+   SECRET_KEY=another_secret_key_here
    ```
 
 ## Usage
