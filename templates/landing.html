@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- @TODO: Backend - Integrate dynamic SEO metadata -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landing Page - Conference Management System</title>
+    <link rel="stylesheet" href="..\static\style.css">
+    <link href="http://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="http://unpkg.com/aos@2.3.1/dist/aos.css">
+</head>
+<body>
+    <!-- @TODO: Backend - Check authentication status and redirect if needed -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <div class="animated-title">
+                <div class="text-top">
+                    <div>
+                        <span>Conference</span>
+                    </div>
+                </div>
+                <div class="text-bottom">
+                    <div>Management System</div>
+                </div>
+            </div>
+            <p class="subtitle">Streamline your conference experience with our cutting-edge management system</p>
+            <div class="cta-buttons">
+                <a href="\login" class="primary-btn"><i class="fas fa-sign-in-alt"></i> Login</a>
+                <a href="\signup" class="secondary-btn"><i class="fas fa-user-plus"></i> Sign Up</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="feature-grid">
+            <div class="feature-card" data-aos="fade-up">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>Conference Organization</h3>
+                <p>Effortlessly plan and manage conferences with our intuitive dashboard. Schedule sessions, manage registrations, and coordinate events seamlessly.</p>
+            </div>
+            <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
+                <i class="fas fa-users"></i>
+                <h3>Session Management</h3>
+                <p>Create and organize multiple sessions, track attendance, and ensure smooth operation of all conference activities.</p>
+            </div>
+            <div class="feature-card" data-aos="fade-up" data-aos-delay="400">
+                <i class="fas fa-user-tie"></i>
+                <h3>Speaker Profiles</h3>
+                <p>Showcase distinguished speakers with detailed profiles, expertise, and session schedules. Help attendees connect with industry leaders.</p>
+            </div>
+            <div class="feature-card" data-aos="fade-up" data-aos-delay="600">
+                <i class="fas fa-comments"></i>
+                <h3>Virtual Networking</h3>
+                <p>Enable meaningful connections through our virtual networking platform. Chat, schedule meetings, and build professional relationships.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="how-it-works">
+        <h2 data-aos="fade-up">How It Works</h2>
+        <div class="steps-container">
+            <div class="step" data-aos="fade-right">
+                <div class="step-number">1</div>
+                <h3>Register Account</h3>
+                <p>Create your account and set up your profile in minutes.</p>
+            </div>
+            <div class="step" data-aos="fade-right" data-aos-delay="200">
+                <div class="step-number">2</div>
+                <h3>Browse Conferences</h3>
+                <p>Explore upcoming conferences and select your interests.</p>
+            </div>
+            <div class="step" data-aos="fade-right" data-aos-delay="400">
+                <div class="step-number">3</div>
+                <h3>Join Sessions</h3>
+                <p>Participate in sessions and engage with speakers.</p>
+            </div>
+            <div class="step" data-aos="fade-right" data-aos-delay="600">
+                <div class="step-number">4</div>
+                <h3>Network & Connect</h3>
+                <p>Connect with other attendees and grow your network.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Email: info@conferencehub.com</p>
+                <p>Phone: +1 (555) 123-4567</p>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 ConferenceHub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="http://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        /* Required Backend APIs:
+         * GET  /api/features - Get platform features
+         * GET  /api/auth/status - Check auth status
+         */
+        
+        AOS.init({
+            duration: 1000,
+            once: true,
+            offset: 100
+        });
+    </script>
+    <script src="../static/js/particles.js"></script>
+    <script src="../static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConferenceHub Dashboard</title>
+  <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../static/dashboard.css">
+  <meta name="csrf-token" content="${csrfToken}">
+  <style>
+    .loading { opacity: 0.5; pointer-events: none; }
+    .error-message { color: #ef4444; display: none; }
+    .ws-status { position: fixed; bottom: 1rem; right: 1rem; }
+    .ws-status.connected { color: #10b981; }
+    .ws-status.disconnected { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <nav class="nav-sidebar">
+    <div class="brand">
+      <i class="fas fa-video"></i>
+      <span>ConferenceHub</span>
+    </div>
+
+    <div class="nav-items">
+      <button class="nav-item active">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Networking</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-video"></i>
+        <span>Sessions</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+        <div class="active-indicator"></div>
+      </button>
+    </div>
+
+    <div class="user-profile">
+      <div class="profile-card">
+        <div class="profile-content">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name">{{ full_name }}</div>
+            <div class="user-email">{{ email }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="dashboard" data-api-base="/api">
+    <!-- Add loading and error states -->
+    <div id="loadingState" class="loading-spinner" style="display: none;">
+      <i class="fas fa-spinner fa-spin"></i> Loading...
+    </div>
+    <div id="errorState" class="error-message"></div>
+
+    <!-- Welcome Section -->
+    <section class="welcome-section" data-endpoint="/api/user/{userId}">
+      <h1 class="welcome-title">Welcome back, {{ full_name.split(' ')[0] if full_name else '' }}!</h1>
+      <p class="welcome-subtitle">Here's an overview of your conference activity</p>
+    </section>
+
+    <!-- Recent Sessions Section -->
+    <section class="sessions-section" data-endpoint="/api/sessions">
+      <div class="section-header">
+        <h2 class="section-title">Recent Sessions</h2>
+      </div>
+      <div class="sessions-list" id="sessionsList" data-join-endpoint="/api/sessions/{sessionId}/join">
+        <!-- Session cards will be dynamically loaded here -->
+      </div>
+    </section>
+
+    <!-- Add WebSocket status indicator -->
+    <div id="wsStatus" class="ws-status disconnected">
+      <i class="fas fa-circle"></i> <span>Disconnected</span>
+    </div>
+
+    <!-- Add status messages container -->
+    <div id="statusMessages" class="status-messages" style="display: none;">
+      <div class="success-message"></div>
+      <div class="error-message"></div>
+    </div>
+  </main>
+
+  <!-- Add session card template -->
+  <template id="sessionCardTemplate">
+    <div class="session-card" data-session-id="">
+      <div class="session-header">
+        <h3 class="session-title"></h3>
+        <span class="session-date"></span>
+      </div>
+      <p class="session-description"></p>
+      <div class="session-meta">
+        <span class="session-type"></span>
+        <span class="session-duration"></span>
+      </div>
+      <button class="btn btn-primary join-button">
+        <i class="fas fa-sign-in-alt"></i> Join Session
+      </button>
+    </div>
+  </template>
+
+  <!-- Add CSRF token input -->
+  <input type="hidden" name="_csrf" id="csrfToken" value="${csrfToken}">
+
+  <script>
+    // Utility functions
+    function sanitizeInput(input) {
+      return input.trim();
+    }
+
+    async function fetchWithProtection(url, options = {}) {
+      return fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          ...options.headers,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Load dashboard data on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const userId = localStorage.getItem('userId') || 'usr_123'; // Fallback if needed
+      fetchUserData(userId);
+      fetchRecentSessions();
+      setupWebSocket();
+    });
+
+    // Fetch and display user profile info
+    async function fetchUserData(userId) {
+      try {
+        const res = await fetch(`/api/user/${userId}`);
+        if (!res.ok) throw new Error('Failed to fetch user');
+        const data = await res.json();
+
+        document.querySelector('.user-name').textContent = data.name;
+        document.querySelector('.user-email').textContent = data.email;
+        document.querySelector('.welcome-title').textContent = `Welcome back, ${data.name.split(' ')[0]}!`;
+
+      } catch (err) {
+        console.error('Error loading user data:', err);
+        handleUnauthorized(err);
+      }
+    }
+
+    // Fetch recent sessions
+    async function fetchRecentSessions() {
+      try {
+        const res = await fetch('/api/sessions?recent=true');
+        const sessions = await res.json();
+        renderSessions(sessions);
+
+      } catch (err) {
+        console.error('Failed to load sessions:', err);
+      }
+    }
+
+    // Render session cards into UI
+    function renderSessions(sessions) {
+      const container = document.getElementById('sessionsList');
+      container.innerHTML = '';
+
+      if (sessions.length === 0) {
+        container.innerHTML = `
+          <div class="no-sessions">
+            <i class="fas fa-calendar-alt empty-icon"></i>
+            <p>No recent sessions found.</p>
+          </div>`;
+        return;
+      }
+
+      sessions.forEach(session => {
+        const card = document.createElement('div');
+        card.className = 'session-card';
+        card.innerHTML = `
+          <div class="session-header">
+            <h3 class="session-title">${session.title}</h3>
+            <span class="session-date">${formatDate(session.date)}</span>
+          </div>
+          <p class="session-description">${session.description || ''}</p>
+          <div class="session-meta">
+            <span class="session-type">${session.type}</span>
+            <span class="session-duration">${session.duration} min</span>
+          </div>
+          <button class="btn btn-primary join-button" onclick="joinSession('${session.id}')">
+            <i class="fas fa-sign-in-alt"></i> Join Session
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Format date utility
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Join session handler
+    async function joinSession(sessionId) {
+      try {
+        const res = await fetchWithProtection(`/api/sessions/${sessionId}/join`, {
+          method: 'POST'
+        });
+        if (!res.ok) throw new Error('Failed to join session');
+        window.open(`session.html?id=${sessionId}`, '_blank');
+      } catch (err) {
+        console.error('Join session failed:', err);
+        alert('Unable to join session at this time.');
+      }
+    }
+
+    // WebSocket for real-time updates
+    function setupWebSocket() {
+      const ws = new WebSocket('wss://localhost:5000/ws/sessions');
+
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        ws.send(JSON.stringify({ type: 'subscribe', userId: localStorage.getItem('userId') }));
+        document.getElementById('wsStatus').classList.remove('disconnected');
+        document.getElementById('wsStatus').classList.add('connected');
+        document.getElementById('wsStatus').querySelector('span').textContent = 'Connected';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'session_update') {
+            fetchRecentSessions(); // Refresh session list
+          }
+        } catch (e) {
+          console.error('Message parsing error:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        document.getElementById('wsStatus').classList.remove('connected');
+        document.getElementById('wsStatus').classList.add('disconnected');
+        document.getElementById('wsStatus').querySelector('span').textContent = 'Disconnected';
+        setTimeout(setupWebSocket, 5000); // Reconnect logic
+      };
+    }
+
+
+
+// Navigation handler - Updated version
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    // Remove active class from all items
+    document.querySelectorAll('.nav-item').forEach(nav => {
+      nav.classList.remove('active');
+    });
+    // Add active class to clicked item
+    item.classList.add('active');
+    
+    // Handle navigation using Flask routes
+    const pageName = item.querySelector('span').textContent.toLowerCase();
+    const routes = {
+      'dashboard': '/dashboard',
+      'networking': '/networking',
+      'profile': '/profile',
+      'sessions': '/sessions',
+      'settings': '/settings'
+    };
+    
+    if (routes[pageName]) {
+      window.location.href = routes[pageName];
+    }
+  });
+});
+
+    // Logout confirmation
+    document.querySelector('.user-profile').addEventListener('click', () => {
+      const confirmLogout = confirm('Are you sure you want to log out?');
+      if (confirmLogout) {
+        signOut();
+      }
+    });
+
+    // Sign out function
+    async function signOut() {
+      try {
+        await fetchWithProtection('/api/auth/logout', {
+          method: 'POST'
+        });
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = '/login.html';
+      } catch (error) {
+        console.error('Logout failed:', error);
+        alert('Logout failed. Please try again.');
+      }
+    }
+  </script>
+</body>
+</html>

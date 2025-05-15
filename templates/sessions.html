@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sessions | ConferenceHub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css "/>
+  <meta name="csrf-token" content="${csrfToken}">
+  <link rel="stylesheet" href="../static/sessions.css">
+  <!-- Add loading spinner styles -->
+  <style>
+    .loading { opacity: 0.5; pointer-events: none; }
+    .spinner { display: none; }
+    .loading .spinner { display: inline-block; }
+  </style>
+</head>
+<body class="is-admin">
+  <!-- Sidebar -->
+  <nav class="nav-sidebar">
+    <div class="brand">
+      <i class="fas fa-video"></i>
+      <span>ConferenceHub</span>
+    </div>
+
+    <div class="nav-items">
+      <button class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Networking</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item active">
+        <i class="fas fa-video"></i>
+        <span>Sessions</span>
+        <div class="active-indicator"></div>
+      </button>
+      <button class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+        <div class="active-indicator"></div>
+      </button>
+    </div>
+
+    <div class="user-profile">
+      <div class="profile-card">
+        <div class="profile-content">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name">{{ full_name }}</div>
+            <div class="user-email">{{ email }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Sessions</h1>
+      <p class="page-description">Join, manage, and create conference sessions</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-navigation">
+      <button class="tab-button active" data-tab="session-management">Session Management</button>
+      
+    </div>
+
+    <!-- Tab Contents -->
+    <div class="tab-content active" id="session-management" 
+         data-sessions-endpoint="/api/sessions"
+         data-users-endpoint="/api/users">
+      <div class="filter-toolbar">
+        <div class="search-box">
+          <div class="search-input">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sessionSearch" placeholder="Search sessions..." autocomplete="off">
+            <div class="search-results" id="searchResults"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary admin-only" id="createSessionBtn">
+          <i class="fas fa-plus"></i> Create Session
+        </button>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+        <h3 class="empty-state-title">Search for sessions</h3>
+        <p class="empty-state-description">
+          Use the search box above to find sessions by name, category, or other keywords.
+        </p>
+      </div>
+
+      <!-- Pending Invites -->
+      <div class="pending-invites-section">
+        <h3 class="card-title"><i class="fas fa-envelope"></i> Pending Invites</h3>
+        <div id="pendingInvitesContainer"></div>
+      </div>
+
+      <!-- Add loading indicator -->
+      <div class="spinner" id="loadingIndicator">
+        <i class="fas fa-spinner fa-spin"></i> Loading...
+      </div>
+    </div>
+
+    <!-- Create Session Form -->
+    <div class="card">
+      <h3 class="card-title"><i class="fas fa-plus-circle"></i> Create New Session</h3>
+      <form class="session-form" id="createSessionForm" data-endpoint="/api/sessions">
+        <!-- Add loading state and error container -->
+        <div class="form-error" style="display: none;"></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="input-label">Session Name*</label>
+            <input type="text" class="input" name="sessionName" required>
+            <div class="error-message" data-for="sessionName"></div>
+          </div>
+          <div class="form-group">
+            <label class="input-label">Duration (minutes)*</label>
+            <input type="number" class="input" name="duration" required min="1">
+            <div class="error-message" data-for="duration"></div>
+          </div>
+          <div class="form-group">
+            <label class="input-label">Max Participants</label>
+            <input type="number" class="input" name="maxParticipants">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="input-label">Description</label>
+          <textarea class="input" rows="4" name="description"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="input-label">Tags</label>
+          <input type="text" class="input" name="tags" placeholder="Enter tags separated by commas">
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn btn-outline" onclick="resetForm('createSessionForm')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Session</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Schedule Session Form -->
+    <div class="card">
+      <h3 class="card-title"><i class="fas fa-calendar-plus"></i> Schedule a Session</h3>
+      <form class="session-form" id="scheduleSessionForm" data-endpoint="/api/sessions/schedule">
+        <!-- Add loading state and error container -->
+        <div class="form-error" style="display: none;"></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="input-label">Session Name</label>
+            <select class="input" name="sessionId" id="sessionSelect"></select>
+          </div>
+          <div class="form-group">
+            <label class="input-label">Date & Time</label>
+            <input type="datetime-local" class="input" name="scheduledTime" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="input-label">Invite Connections</label>
+          <div class="connection-list" id="inviteConnectionsList"></div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn btn-outline" onclick="resetForm('scheduleSessionForm')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Schedule Session</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- User Management Tab -->
+    <div class="tab-content admin-tab" id="user-management">
+      <div class="card">
+        <h3 class="card-title"><i class="fas fa-user-tag"></i> Role Assignment</h3>
+        <form id="assignRoleForm" data-endpoint="/api/sessions/assign-role">
+          <!-- Add loading state and error container -->
+          <div class="form-error" style="display: none;"></div>
+          <div class="grid grid-cols-2">
+            <div>
+              <div class="input-group">
+                <label class="input-label">Search Users</label>
+                <div class="search-input">
+                  <i class="fas fa-search"></i>
+                  <input type="text" class="input" id="userSearchInput" 
+                         data-search-endpoint="/api/users?search="
+                         placeholder="Type to search users...">
+                  <div class="search-results" id="userSearchResults"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="input-group">
+                <label class="input-label">Session</label>
+                <select class="input" id="roleSessionId" required></select>
+              </div>
+              <div class="input-group">
+                <label class="input-label">Session Role</label>
+                <select class="input" id="roleType" required>
+                  <option value="">Select role</option>
+                  <option value="host">Host</option>
+                  <option value="speaker">Speaker</option>
+                  <option value="attendee">Attendee</option>
+                </select>
+              </div>
+              <button class="btn btn-primary">Assign to Session</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="sessionModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+      <div class="session-card">
+        <div class="session-card-header">
+          <div class="session-icon"><i class="fas fa-chart-pie"></i></div>
+          <div class="session-info">
+            <div class="session-name" id="modalSessionName"></div>
+            <div class="session-meta">
+              <span class="session-meta-item" id="modalSessionTime"></span>
+              <span class="session-meta-item"><i class="fas fa-clock"></i> 60 min</span>
+            </div>
+          </div>
+        </div>
+        <div class="session-description" id="modalSessionDescription"></div>
+        <div class="session-tags" id="modalSessionTags"></div>
+        <div class="session-footer">
+          <div class="session-participants">
+            <div class="participant-avatar-small"><i class="fas fa-user"></i></div>
+            <span class="participant-count">12 participants</span>
+          </div>
+          <button class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Join Session</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add form status messages container -->
+  <div id="statusMessages" class="status-messages" style="display: none;">
+    <div class="message success"></div>
+    <div class="message error"></div>
+  </div>
+
+  <!-- Add hidden CSRF token input -->
+  <input type="hidden" id="csrfToken" name="_csrf" value="${csrfToken}">
+
+  <script>
+        // Navigation functionality
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Remove active class from all items
+        document.querySelectorAll('.nav-item').forEach(nav => {
+          nav.classList.remove('active');
+        });
+        // Add active class to clicked item
+        item.classList.add('active');
+        
+        // Handle navigation
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        if (pageName === 'dashboard') {
+          window.location.href = 'dashboard.html';
+        } else if (pageName === 'networking') {
+          window.location.href = 'networking-page.html';
+        } else if (pageName === 'profile') {
+          window.location.href = 'profile.html';
+        } else if (pageName === 'sessions') {
+          window.location.href = 'sessions.html';
+        } else if (pageName === 'settings') {
+          window.location.href = 'settings.html';
+        }
+      });
+    });
+// Navigation handler - Updated version
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    // Remove active class from all items
+    document.querySelectorAll('.nav-item').forEach(nav => {
+      nav.classList.remove('active');
+    });
+    // Add active class to clicked item
+    item.classList.add('active');
+    
+    // Handle navigation using Flask routes
+    const pageName = item.querySelector('span').textContent.toLowerCase();
+    const routes = {
+      'dashboard': '/dashboard',
+      'networking': '/networking',
+      'profile': '/profile',
+      'sessions': '/sessions',
+      'settings': '/settings'
+    };
+    
+    if (routes[pageName]) {
+      window.location.href = routes[pageName];
+    }
+  });
+});
+    // CSRF Token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    // Utility functions
+    function sanitizeInput(input) {
+      return input.trim();
+    }
+
+    async function fetchWithProtection(url, options = {}) {
+      return fetch(url, {
+        ...options,
+        credentials: 'same-origin',
+        headers: {
+          ...options.headers,
+          'X-CSRF-Token': csrfToken,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Load sessions on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      fetch('/api/sessions')
+        .then(res => res.json())
+        .then(sessions => populateSessionSelect(sessions))
+        .catch(err => console.error('Failed to load sessions:', err));
+
+      fetch('/api/users')
+        .then(res => res.json())
+        .then(users => populateConnectionCheckboxes(users))
+        .catch(err => console.error('Failed to load users:', err));
+    });
+
+    // Populate session select dropdown
+    function populateSessionSelect(sessions) {
+      const select = document.getElementById('sessionSelect');
+      select.innerHTML = '<option value="">Select session</option>';
+      sessions.forEach(session => {
+        const option = document.createElement('option');
+        option.value = session.id;
+        option.textContent = session.name;
+        select.appendChild(option);
+      });
+    }
+
+    // Populate connection checkboxes
+    function populateConnectionCheckboxes(users) {
+      const container = document.getElementById('inviteConnectionsList');
+      container.innerHTML = '';
+      users.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'connection-item';
+        div.innerHTML = `
+          <input type="checkbox" id="user-${user.id}" value="${user.id}">
+          <label for="user-${user.id}">${user.name}</label>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Search sessions
+    const sessionSearch = document.getElementById('sessionSearch');
+    const searchResults = document.getElementById('searchResults');
+
+    sessionSearch.addEventListener('input', async (e) => {
+      const term = sanitizeInput(e.target.value);
+      if (term.length < 1) {
+        searchResults.style.display = 'none';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/sessions?search=${encodeURIComponent(term)}`);
+        const sessions = await res.json();
+
+        if (sessions.length === 0) {
+          searchResults.innerHTML = `
+            <div class="search-result-empty">
+              <i class="fas fa-search"></i>
+              <span>No sessions found</span>
+            </div>`;
+          searchResults.style.display = 'block';
+          return;
+        }
+
+        searchResults.innerHTML = sessions.map(session => `
+          <div class="search-result-item" onclick="selectSession('${session.name}')">
+            <div class="result-main">
+              <i class="fas fa-calendar-alt"></i>
+              <div class="result-info">
+                <div class="result-name">${session.name}</div>
+                <div class="result-meta">${session.category} • ${session.time}</div>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right"></i>
+          </div>
+        `).join('');
+        searchResults.style.display = 'block';
+
+      } catch (err) {
+        console.error('Search failed:', err);
+      }
+    });
+
+    // Handle session modal selection
+    function selectSession(sessionName) {
+      fetch(`/api/sessions?name=${encodeURIComponent(sessionName)}`)
+        .then(res => res.json())
+        .then(sessions => {
+          const session = sessions[0];
+          if (!session) return;
+
+          document.getElementById('modalSessionName').textContent = session.name;
+          document.getElementById('modalSessionTime').innerHTML = `<i class="fas fa-calendar"></i> ${session.time}`;
+          document.getElementById('modalSessionDescription').textContent = session.description;
+          document.getElementById('modalSessionTags').innerHTML = session.tags.map(tag =>
+            `<div class="session-tag">${tag}</div>`
+          ).join('');
+
+          document.getElementById('sessionModal').classList.add('active');
+        });
+    }
+
+    function closeModal() {
+      document.getElementById('sessionModal').classList.remove('active');
+    }
+
+    // Submit create session form
+    document.getElementById('createSessionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const body = Object.fromEntries(formData);
+
+      try {
+        const res = await fetchWithProtection('/api/sessions', {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+        if (res.ok) {
+          alert('Session created successfully!');
+          e.target.reset();
+        }
+      } catch (err) {
+        console.error('Error creating session:', err);
+      }
+    });
+
+    // Submit assign role form
+    document.getElementById('assignRoleForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const sessionId = document.getElementById('roleSessionId').value;
+      const userIds = Array.from(document.querySelectorAll('#inviteConnectionsList input:checked')).map(cb => cb.value);
+      const role = document.getElementById('roleType').value;
+
+      try {
+        const res = await fetchWithProtection('/api/sessions/assign-role', {
+          method: 'POST',
+          body: JSON.stringify({ sessionId, userIds, role })
+        });
+        if (res.ok) {
+          alert('Roles assigned successfully!');
+        }
+      } catch (err) {
+        console.error('Error assigning roles:', err);
+      }
+    });
+
+    // Reset form
+    function resetForm(formId) {
+      document.getElementById(formId).reset();
+    }
+  </script>
+</body>
+</html>
