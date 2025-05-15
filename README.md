@@ -1,64 +1,47 @@
-# Conference Management System Backend
+# Conference Manager
 
-This project is a backend implementation for a Conference Management System using Flask. It provides various features for managing user authentication, sessions, user profiles, networking, analytics, and more.
-
+A modern web application for managing and participating in conferences.
 
 ## Features
 
-- **User Authentication**: Registration and login functionality with JWT token generation.
-- **Session Management**: CRUD operations for managing conference sessions.
-- **User Profiles**: Endpoints for retrieving and updating user information.
-- **Networking**: Features for managing user connections and direct messaging.
-- **Analytics**: Collection and reporting of user engagement and session attendance data.
-- **Real-time Features**: WebSocket support for live interactions during sessions.
-- **Database Configuration**: SQLAlchemy ORM with Alembic for database migrations.
-- **File Uploads**: Image upload support using Pillow library.
+- User authentication and profile management
+- Conference session scheduling and attendance tracking
+- Networking features for participants
+- Responsive web interface
 
 ## Installation
 
 1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd conference-management-system
    ```
-
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   git clone https://github.com/yourusername/conference-manager.git
    ```
-
-3. Install the required packages:
-   ```bash
+2. Install dependencies:
+   ```
    pip install -r requirements.txt
    ```
-
-4. Set up environment variables:
-   Create a `.env` file in the root directory with the following contents:
+3. Set up environment variables:
    ```
-   FLASK_APP=src/app.py
-   FLASK_ENV=development
-   DATABASE_URI=sqlite:///conference.db
-   JWT_SECRET_KEY=your_secret_key_here
-   SECRET_KEY=another_secret_key_here
+   cp .env.example .env
+   ```
+4. Run the application:
+   ```
+   python app.py
    ```
 
 ## Usage
 
-To run the application, execute the following command:
+- Access the application at `http://localhost:5000`
+- Use the navigation menu to access different features
+- Manage your profile and conference participation
 
-```bash
-python src/app.py
-```
+## Contributing
 
-## Testing
-
-To run the tests, use:
-
-```bash
-pytest
-```
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a pull request
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details
