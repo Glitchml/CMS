@@ -90,7 +90,7 @@ def send_reset_email(email, token):
 
 @app.route('/')
 def index():
-    return redirect(url_for('login'))
+    return render_template('landing.html')
 
 @app.route('/login')
 def login():
@@ -469,6 +469,10 @@ def connection_status():
         if c.fetchone():
             return jsonify({'status': 'pending'})
         return jsonify({'status': 'none'})
+
+@app.route('/app')
+def app_home():
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
