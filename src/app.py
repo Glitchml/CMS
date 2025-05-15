@@ -1,657 +1,474 @@
-from flask import Flask, request, jsonify, render_template, make_response, redirect
-from config import Config  # Changed from src.config
-from models.user import db, User  # Changed from src.models.user
-from src.models.session import Session  # Add this import
-from flask_jwt_extended import (
-    JWTManager, create_access_token, create_refresh_token,
-    jwt_required, get_jwt_identity, get_jwt, verify_jwt_in_request
-) 
-from flask_cors import CORS  # Add this import at the top
-from functools import wraps
-from datetime import timedelta, datetime
+import os
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from datetime import datetime, timedelta
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_cors import CORS
 
-def dashboard_token_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            # First try to get token from Authorization header
-            auth_header = request.headers.get('Authorization')
-            if auth_header and auth_header.startswith('Bearer '):
-                verify_jwt_in_request()
-                return f(*args, **kwargs)
-            
-            # Then try to get token from query params
-            token = request.args.get('token')
-            if token:
-                request.headers['Authorization'] = f'Bearer {token}'
-                verify_jwt_in_request()
-                return f(*args, **kwargs)
-            
-            return jsonify({"error": "Token is missing"}), 401
-            
-        except Exception as e:
-            return jsonify({"error": str(e)}), 401
+app = Flask(__name__)
+app.secret_key = secrets.token_hex(16)
+CORS(app, supports_credentials=True)
+
+# Database setup
+DB_PATH = "conference.db"
+
+def init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                token TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                date TIMESTAMP NOT NULL,
+                type TEXT NOT NULL,
+                duration INTEGER NOT NULL
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS connection_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender_id INTEGER NOT NULL,
+                receiver_id INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender_id) REFERENCES users(id),
+                FOREIGN KEY (receiver_id) REFERENCES users(id)
+            )
+        ''')
+        conn.commit()
+
+# Initialize database
+if not os.path.exists(DB_PATH):
+    init_db()
+
+# Email configuration (update with your SMTP settings)
+EMAIL_CONFIG = {
+    'smtp_server': 'smtp.gmail.com',
+    'smtp_port': 587,
+    'sender_email': 'your_email@gmail.com',  # Replace with actual email
+    'sender_password': 'your_app_password'   # Replace with actual app password
+}
+
+def send_reset_email(email, token):
+    reset_url = f"http://localhost:5000/reset-password?token={token}"
+    msg = MIMEText(f"Click the link to reset your password: {reset_url}\nThis link expires in 1 hour.")
+    msg['Subject'] = 'Conference Management System - Password Reset'
+    msg['From'] = EMAIL_CONFIG['sender_email']
+    msg['To'] = email
+
+    try:
+        with smtplib.SMTP(EMAIL_CONFIG['smtp_server'], EMAIL_CONFIG['smtp_port']) as server:
+            server.starttls()
+            server.login(EMAIL_CONFIG['sender_email'], EMAIL_CONFIG['sender_password'])
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
+
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/forgot-password')
+def forgot_password():
+    return render_template('forgot-password.html')
+
+@app.route('/reset-password')
+def reset_password():
+    return render_template('reset-password.html')
+
+@app.route('/signup')
+def signup():
+    return render_template('signup.html')
+
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT full_name, email FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        if not user:
+            return redirect(url_for('login'))
+        full_name, email = user
+    return render_template('dashboard.html', csrf_token=secrets.token_hex(16), full_name=full_name, email=email)
+
+@app.route('/networking')
+def networking():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT full_name, email FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        if not user:
+            return redirect(url_for('login'))
+        full_name, email = user
+    return render_template('networking-page.html', csrf_token=secrets.token_hex(16), full_name=full_name, email=email)
+
+@app.route('/clicked-profile')
+def clicked_profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     
-    return decorated_function
-
-# Add this after the existing decorators
-def handle_db_operation(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            result = f(*args, **kwargs)
-            db.session.commit()
-            return result
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
-    return decorated_function
-
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
-    db.init_app(app)
-    jwt = JWTManager(app)
-
-    app.url_map.strict_slashes = False
-
-    # Add CORS support with more specific configuration
-    CORS(app, resources={
-        r"/api/*": {"origins": "*"},
-        r"/dashboard/*": {"origins": "*"},
-        r"/login/*": {"origins": "*"},
-        r"/": {"origins": "*"}
-    }, supports_credentials=True)
-
-    # Page Routes
-    @app.route('/')
-    def index():
-        return render_template('landing.html')
-
-    @app.route('/login/', methods=['GET', 'POST'])
-    def login_page():
-        return render_template('login.html')
-
-
-    @app.route('/signup')
-    def signup_page():
-        return render_template('signup.html')
-
-    @app.route('/dashboard', methods=['GET', 'POST'])
-    def dashboard():
-        # Get token from cookie
-        token = request.cookies.get('access_token_cookie')
+    # Get the user ID from query parameters
+    user_id = request.args.get('userId')
+    if not user_id:
+        return redirect(url_for('networking'))
+    
+    # Fetch user data from database
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT id, full_name, email FROM users WHERE id = ?', (user_id,))
+        user = c.fetchone()
         
-        if not token:
-            return redirect('/login')
-            
-        try:
-            # Verify token
-            user_id = get_jwt_identity()
-            user = User.query.get(user_id)
-            return render_template('dashboard.html', user=user.to_dict())
-        except:
-            return redirect('/login')
+        if not user:
+            return redirect(url_for('networking'))
+    
+    return render_template(
+        'clicked-profile.html',
+        csrf_token=secrets.token_hex(16),
+        user_id=user[0],
+        full_name=user[1],
+        email=user[2]
+    )
 
-    @app.route('/profile/', methods=['GET', 'POST'])
-    @jwt_required()
-    def profile():
-        return render_template('profile.html')
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT full_name, email FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        if not user:
+            return redirect(url_for('login'))
+        full_name, email = user
+    return render_template('profile.html', csrf_token=secrets.token_hex(16), full_name=full_name, email=email)
 
-    @app.route('/settings/', methods=['GET', 'POST'])
-    @jwt_required()
-    def settings():
-        return render_template('settings.html')
+@app.route('/sessions')
+def sessions():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT full_name, email FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        if not user:
+            return redirect(url_for('login'))
+        full_name, email = user
+    return render_template('sessions.html', csrf_token=secrets.token_hex(16), full_name=full_name, email=email)
 
-    @app.route('/networking/', methods=['GET', 'POST'])
-    @jwt_required()
-    def networking():
-        return render_template('networking-page.html')
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT full_name, email FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        if not user:
+            return redirect(url_for('login'))
+        full_name, email = user
+    return render_template('settings.html', csrf_token=secrets.token_hex(16), full_name=full_name, email=email)
 
-    @app.route('/forgot-password/', methods=['GET', 'POST'])
-    def forgot_password_page():
-        return render_template('forgot-password.html')
-
-    @app.route('/sessions/', methods=['GET', 'POST'])
-    @jwt_required()
-    def sessions():
-        return render_template('sessions.html')
-
-    # Create tables within app context
-    with app.app_context():
-        db.create_all()
-        print("Database tables created successfully!")
-
-    # Store revoked tokens in memory
-    revoked_tokens = set()
-
-    @jwt.token_in_blocklist_loader
-    def check_if_token_revoked(jwt_header, jwt_payload):
-        jti = jwt_payload["jti"]
-        return jti in revoked_tokens
-
-    @app.route('/api/auth/register', methods=['POST'])
-    def register():
-        data = request.get_json()
-        required_fields = ['username', 'email', 'password']
-        missing_fields = [field for field in required_fields if field not in data]
-        if missing_fields:
-            return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
-
-        if User.query.filter_by(username=data['username']).first():
-            return jsonify({'error': 'Username already exists'}), 409
-        if User.query.filter_by(email=data['email']).first():
-            return jsonify({'error': 'Email already exists'}), 409
-
-        user = User(
-            username=data['username'],
-            email=data['email']
-        )
-        user.set_password(data['password'])
-
-        try:
-            db.session.add(user)
-            db.session.commit()
-            return jsonify({
-                'message': 'User created successfully',
-                'user': user.to_dict()
-            }), 201
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': 'Failed to create user'}), 500
-
-    @app.route('/api/auth/login', methods=['POST'])
-    def login():
-        data = request.get_json()
-        if not all(k in data for k in ['username', 'password']):
-            return jsonify({'error': 'Missing username or password'}), 400
-
-        user = User.query.filter_by(username=data['username']).first()
-        if not user or not user.check_password(data['password']):
-            return jsonify({'error': 'Invalid username or password'}), 401
-
-        access_token = create_access_token(identity=user.id)
+@app.route('/api/user', methods=['GET'])
+def api_user():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT full_name, email FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
         
-        # Create response with cookie
-        response = make_response(jsonify({
-            'message': 'Login successful',
-            'user': user.to_dict()
-        }))
-        
-        # Set JWT as HTTP-only cookie
-        response.set_cookie(
-            'access_token_cookie',
-            access_token,
-            httponly=True,
-            secure=True,
-            samesite='Strict',
-            max_age=3600  # 1 hour
-        )
-        
-        return response
-
-    @app.route('/api/protected', methods=['GET'])
-    @jwt_required()
-    def protected():
-        current_user_id = get_jwt_identity()
-        print(f"Current User ID: {current_user_id}")  # Debug print
-        user = User.query.get(current_user_id)
-
         if not user:
             return jsonify({'error': 'User not found'}), 404
-
-        return jsonify({
-            'message': 'Access granted to protected route',
-            'user': user.to_dict()
-        })
-
-    @app.route('/api/auth/refresh', methods=['POST'])
-    @jwt_required(refresh=True)
-    def refresh():
-        identity = get_jwt_identity()
-        access_token = create_access_token(identity=identity)
-        return jsonify({'access_token': access_token}), 200
-
-    @app.route('/api/auth/logout', methods=['POST'])
-    @jwt_required()
-    def logout():
-        jti = get_jwt()["jti"]
-        revoked_tokens.add(jti)
-        return jsonify({"message": "Successfully logged out"}), 200
-
-    # Dashboard API Routes
-    @app.route('/api/user/<int:user_id>')
-    @jwt_required()
-    def get_user_profile(user_id):
-        current_user_id = get_jwt_identity()
-        if current_user_id != user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
             
-        user = User.query.get_or_404(user_id)
-        return jsonify(user.to_dict())
+        return jsonify({
+            'name': user[0],
+            'email': user[1]
+        }), 200
 
-    @app.route('/api/sessions')
-    @jwt_required()
-    def get_sessions():
-        user_id = get_jwt_identity()
-        recent = request.args.get('recent', type=bool, default=False)
-        
-        query = Session.query
+@app.route('/api/sessions', methods=['GET'])
+def api_sessions():
+    recent = request.args.get('recent', default='false', type=str).lower() == 'true'
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        query = 'SELECT id, title, description, date, type, duration FROM sessions'
         if recent:
-            query = query.filter(Session.start_time >= datetime.utcnow())
+            query += ' ORDER BY date DESC LIMIT 10'
+        c.execute(query)
+        sessions = c.fetchall()
         
-        sessions = query.order_by(Session.start_time).limit(10).all()
-        return jsonify([session.to_dict() for session in sessions])
+        return jsonify([
+            {
+                'id': s[0],
+                'title': s[1],
+                'description': s[2],
+                'date': s[3],
+                'type': s[4],
+                'duration': s[5]
+            } for s in sessions
+        ]), 200
 
-    @app.route('/api/sessions/<int:session_id>')
-    @jwt_required()
-    def get_session(session_id):
-        session = Session.query.get_or_404(session_id)
-        return jsonify(session.to_dict())
-
-    @app.route('/api/sessions/<int:session_id>/join', methods=['POST'])
-    @jwt_required()
-    def join_session(session_id):
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        session = Session.query.get_or_404(session_id)
+@app.route('/api/sessions/<session_id>/join', methods=['POST'])
+def api_join_session(session_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT id FROM sessions WHERE id = ?', (session_id,))
+        session_exists = c.fetchone()
         
-        if user.join_session(session):
-            db.session.commit()
-            return jsonify({'message': 'Joined session successfully'})
-        
-        return jsonify({'error': 'Already in session'}), 400
-
-    # Session Management API Routes
-    @app.route('/api/sessions', methods=['POST'])
-    @jwt_required()
-    def create_session():
-        data = request.get_json()
-        user_id = get_jwt_identity()
-        
-        required_fields = ['title', 'description', 'startTime', 'duration']
-        if not all(field in data for field in required_fields):
-            return jsonify({'error': 'Missing required fields'}), 400
+        if not session_exists:
+            return jsonify({'error': 'Session not found'}), 404
             
+        return jsonify({'message': 'Joined session successfully'}), 200
+
+@app.route('/api/auth/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    full_name = data.get('fullName')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not full_name or not email or not password:
+        return jsonify({'error': 'All fields are required'}), 400
+
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
         try:
-            session = Session(
-                title=data['title'],
-                description=data['description'],
-                start_time=datetime.fromisoformat(data['startTime'].replace('Z', '+00:00')),
-                duration=data['duration'],
-                creator_id=user_id,
-                max_participants=data.get('maxParticipants', 100),
-                tags=','.join(data.get('tags', []))
-            )
-            
-            db.session.add(session)
-            session.assign_role(User.query.get(user_id), 'host')
-            db.session.commit()
-            
-            return jsonify({
-                'message': 'Session created successfully',
-                'session': session.to_dict()
-            }), 201
-            
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            password_hash = generate_password_hash(password)
+            c.execute('INSERT INTO users (full_name, email, password_hash) VALUES (?, ?, ?)',
+                     (full_name, email, password_hash))
+            conn.commit()
+            return jsonify({'message': 'Registration successful'}), 201
+        except sqlite3.IntegrityError:
+            return jsonify({'error': 'Email already registered'}), 409
 
-    @app.route('/api/sessions/schedule', methods=['POST'])
-    @jwt_required()
-    def schedule_session():
-        data = request.get_json()
-        user_id = get_jwt_identity()
-        
-        session = Session.query.get_or_404(data['sessionId'])
-        if session.creator_id != user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-            
-        try:
-            session.start_time = datetime.fromisoformat(data['scheduledTime'].replace('Z', '+00:00'))
-            session.status = 'scheduled'
-            
-            # Add invited users
-            for invitee_id in data.get('invitees', []):
-                invitee = User.query.get(invitee_id)
-                if invitee:
-                    session.assign_role(invitee, 'attendee')
-                    
-            db.session.commit()
-            return jsonify({'message': 'Session scheduled successfully'})
-            
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    email = data.get('username')
+    password = data.get('password')
+    remember = data.get('remember', False)
 
-    @app.route('/api/sessions/assign-role', methods=['POST'])
-    @jwt_required()
-    def assign_session_role():
-        data = request.get_json()
-        user_id = get_jwt_identity()
-        
-        session = Session.query.get_or_404(data['sessionId'])
-        if session.get_participant_role(user_id) != 'host':
-            return jsonify({'error': 'Only hosts can assign roles'}), 403
-            
-        try:
-            target_user = User.query.get_or_404(data['userId'])
-            if session.assign_role(target_user, data['role']):
-                db.session.commit()
-                return jsonify({'message': 'Role assigned successfully'})
-            return jsonify({'error': 'Invalid role'}), 400
-            
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
 
-    @app.route('/api/users')
-    @jwt_required()
-    def search_session_users():
-        query = request.args.get('search', '')
-        users = User.search_users(query, get_jwt_identity())
-        return jsonify([{
-            'id': user.id,
-            'name': user.username,
-            'email': user.email
-        } for user in users])
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT id, full_name, password_hash FROM users WHERE email = ?', (email,))
+        user = c.fetchone()
 
-    # Networking API Routes
-    @app.route('/api/network/users')
-    @jwt_required()
-    def get_network_users():
-        user_id = get_jwt_identity()
-        users = User.query.filter(User.id != user_id).all()
-        return jsonify([user.to_dict() for user in users])
+        if not user or not check_password_hash(user[2], password):
+            return jsonify({'error': 'Invalid email or password'}), 401
 
-    @app.route('/api/network/requests')
-    @jwt_required()
-    def get_connection_requests():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        return jsonify([req.to_dict() for req in user.pending_requests])
+        session['user_id'] = user[0]
+        session['full_name'] = user[1]
+        if remember:
+            session.permanent = True
+        else:
+            session.permanent = False
 
-    @app.route('/api/network/connect/<int:target_id>', methods=['POST'])
-    @jwt_required()
-    def send_connection_request(target_id):
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        target = User.query.get_or_404(target_id)
-        
-        if user.send_connection_request(target):
-            db.session.commit()
-            return jsonify({'message': 'Connection request sent'})
-        return jsonify({'error': 'Request already sent'}), 400
+        return jsonify({'message': 'Login successful'}), 200
 
-    @app.route('/api/network/accept/<int:request_id>', methods=['POST'])
-    @jwt_required()
-    def accept_connection(request_id):
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        request = ConnectionRequest.query.get_or_404(request_id)
-        
-        if request.target_id != user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-            
-        if user.accept_connection_request(request):
-            db.session.commit()
-            return jsonify({'message': 'Connection accepted'})
-        return jsonify({'error': 'Invalid request'}), 400
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def api_forgot_password():
+    data = request.get_json()
+    email = data.get('email')
 
-    # Additional Networking API Routes
-    @app.route('/api/network/decline/<int:request_id>', methods=['POST'])
-    @jwt_required()
-    def decline_connection(request_id):
-        user_id = get_jwt_identity()
-        request = ConnectionRequest.query.get_or_404(request_id)
-        
-        if request.target_id != user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        request.status = 'declined'
-        db.session.commit()
-        return jsonify({'message': 'Connection request declined'})
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
 
-    @app.route('/api/network/block/<int:user_id>', methods=['POST'])
-    @jwt_required()
-    def block_user(user_id):
-        current_user_id = get_jwt_identity()
-        user = User.query.get_or_404(current_user_id)
-        target = User.query.get_or_404(user_id)
-        
-        if user.block_user(target):
-            db.session.commit()
-            return jsonify({'message': 'User blocked successfully'})
-        return jsonify({'error': 'User already blocked'}), 400
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT id FROM users WHERE email = ?', (email,))
+        user = c.fetchone()
 
-    @app.route('/api/network/unblock/<int:user_id>', methods=['DELETE'])
-    @jwt_required()
-    def unblock_user(user_id):
-        current_user_id = get_jwt_identity()
-        user = User.query.get_or_404(current_user_id)
-        target = User.query.get_or_404(user_id)
-        
-        if user.unblock_user(target):
-            db.session.commit()
-            return jsonify({'message': 'User unblocked successfully'})
-        return jsonify({'error': 'User not blocked'}), 400
+        if not user:
+            return jsonify({'error': 'Email not found'}), 404
 
-    @app.route('/api/network/blocked')
-    @jwt_required()
-    def get_blocked_users():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        return jsonify([blocked.to_dict() for blocked in user.blocked_users])
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now() + timedelta(hours=1)
 
-    @app.route('/api/network/search')
-    @jwt_required()
-    def search_users():
-        query = request.args.get('q', '')
-        if len(query) < 2:
-            return jsonify({'error': 'Search query too short'}), 400
-            
-        current_user_id = get_jwt_identity()
-        users = User.search_users(query, current_user_id)
-        return jsonify([user.to_dict() for user in users])
+        c.execute('INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)',
+                 (email, token, expires_at))
+        conn.commit()
 
-    # Profile Management API Routes
-    @app.route('/api/profile/<int:user_id>')
-    @jwt_required()
-    def get_profile(user_id):
-        user = User.query.get_or_404(user_id)
-        return jsonify(user.to_dict())
+    if send_reset_email(email, token):
+        return jsonify({'message': 'Password reset link sent'}), 200
+    else:
+        return jsonify({'error': 'Failed to send reset email'}), 500
 
-    @app.route('/api/profile/<int:user_id>', methods=['PUT'])
-    @jwt_required()
-    def update_profile(user_id):
-        current_user_id = get_jwt_identity()
-        if current_user_id != user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-            
-        user = User.query.get_or_404(user_id)
-        data = request.get_json()
-        
-        try:
-            user.update_profile(data)
-            db.session.commit()
-            return jsonify({
-                'message': 'Profile updated successfully',
-                'user': user.to_dict()
-            })
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+@app.route('/api/auth/reset-password', methods=['POST'])
+def api_reset_password():
+    data = request.get_json()
+    token = data.get('token')
+    password = data.get('password')
+    confirm_password = data.get('confirmPassword')
 
-    @app.route('/api/profile/avatar', methods=['POST'])
-    @jwt_required()
-    def upload_avatar():
-        if 'avatar' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
-            
-        file = request.files['avatar']
-        if not file.filename:
-            return jsonify({'error': 'No file selected'}), 400
-            
-        try:
-            # Save file and get URL
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            # Update user's avatar URL
-            user_id = get_jwt_identity()
-            user = User.query.get_or_404(user_id)
-            user.avatar_url = f'/uploads/{filename}'
-            db.session.commit()
-            
-            return jsonify({
-                'message': 'Avatar uploaded successfully',
-                'avatarUrl': user.avatar_url
-            })
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+    if not token or not password or not confirm_password:
+        return jsonify({'error': 'All fields are required'}), 400
 
-    @app.route('/api/profile/stats')
-    @jwt_required()
-    def get_user_stats():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        return jsonify(user.get_stats())
+    if password != confirm_password:
+        return jsonify({'error': 'Passwords do not match'}), 400
 
-    @app.route('/api/profile/sessions')
-    @jwt_required()
-    def get_user_sessions():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        
-        session_type = request.args.get('type', 'upcoming')
-        now = datetime.utcnow()
-        
-        if session_type == 'upcoming':
-            sessions = [s for s in user.sessions if s.start_time > now]
-        else:  # history
-            sessions = [s for s in user.sessions if s.start_time <= now]
-            
-        return jsonify([{
-            'id': s.id,
-            'title': s.title,
-            'date': s.start_time.isoformat(),
-            'type': UserSessionRole.query.filter_by(
-                user_id=user_id,
-                session_id=s.id
-            ).first().role,
-            'status': s.status
-        } for s in sessions])
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('SELECT email, expires_at FROM password_resets WHERE token = ?', (token,))
+        reset = c.fetchone()
 
-    # Settings Management API Routes
-    @app.route('/api/settings/<int:user_id>')
-    @jwt_required()
-    def get_settings(user_id):
-        current_user_id = get_jwt_identity()
-        if current_user_id != user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-            
-        user = User.query.get_or_404(user_id)
+        if not reset:
+            return jsonify({'error': 'Invalid or expired token'}), 404
+
+        email, expires_at = reset
+        if datetime.strptime(expires_at, '%Y-%m-%d %H:%M:%S.%f') < datetime.now():
+            c.execute('DELETE FROM password_resets WHERE token = ?', (token,))
+            conn.commit()
+            return jsonify({'error': 'Token expired'}), 410
+
+        password_hash = generate_password_hash(password)
+        c.execute('UPDATE users SET password_hash = ? WHERE email = ?', (password_hash, email))
+        c.execute('DELETE FROM password_resets WHERE token = ?', (token,))
+        conn.commit()
+
+        return jsonify({'message': 'Password reset successful'}), 200
+
+@app.route('/api/auth/logout', methods=['POST'])
+def api_logout():
+    session.clear()
+    return jsonify({'message': 'Logout successful'}), 200
+
+@app.route('/api/users/search', methods=['GET'])
+def search_users():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    search_term = request.args.get('q', '').strip()
+    if not search_term:
+        return jsonify([])
+
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('''
+            SELECT id, full_name, email
+            FROM users
+            WHERE full_name LIKE ? OR email LIKE ?
+            LIMIT 10
+        ''', (f'%{search_term}%', f'%{search_term}%'))
+        results = [{'id': row[0], 'name': row[1], 'email': row[2]} for row in c.fetchall()]
+        return jsonify(results)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/api/profile/<int:user_id>')
+def get_user_profile(user_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('''
+            SELECT id, full_name, email, created_at
+            FROM users
+            WHERE id = ?
+        ''', (user_id,))
+        user = c.fetchone()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        # Example fields; in production, fetch these from DB or user profile
         return jsonify({
-            'profile': user.to_dict(),
-            'settings': {
-                'theme': user.theme_preference,
-                'notifications': {
-                    'email': user.email_notifications,
-                    'sessions': user.session_reminders,
-                    'messages': user.message_notifications
-                }
-            }
+            'id': user[0],
+            'name': user[1],
+            'email': user[2],
+            'memberSince': user[3],
+            'jobTitle': 'Software Engineer',
+            'company': 'Tech Corp',
+            'location': 'San Francisco',
+            'linkedIn': 'https://linkedin.com/in/johndoe'
         })
 
-    @app.route('/api/settings/profile', methods=['PUT'])
-    @jwt_required()
-    @handle_db_operation
-    def update_settings_profile():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        data = request.get_json()
-        user.update_profile(data)
-        return jsonify({
-            'message': 'Profile settings updated successfully',
-            'user': user.to_dict()
-        })
-
-    @app.route('/api/settings/password', methods=['PUT'])
-    @jwt_required()
-    def change_password():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        data = request.get_json()
-        
-        if not all(k in data for k in ['currentPassword', 'newPassword']):
-            return jsonify({'error': 'Missing required fields'}), 400
-            
+@app.route('/api/network/request-connection', methods=['POST'])
+def request_connection():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    target_user_id = data.get('targetUserId')
+    if not target_user_id:
+        return jsonify({'error': 'Target user ID required'}), 400
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
         try:
-            if user.change_password(data['currentPassword'], data['newPassword']):
-                db.session.commit()
-                return jsonify({'message': 'Password changed successfully'})
-            return jsonify({'error': 'Current password is incorrect'}), 400
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            c.execute('''
+                INSERT INTO connection_requests (sender_id, receiver_id, status, created_at)
+                VALUES (?, ?, 'pending', CURRENT_TIMESTAMP)
+            ''', (session['user_id'], target_user_id))
+            conn.commit()
+            return jsonify({'message': 'Connection request sent'}), 200
+        except sqlite3.IntegrityError:
+            return jsonify({'error': 'Request already exists'}), 409
 
-    @app.route('/api/settings/notifications', methods=['PUT'])
-    @jwt_required()
-    def update_notification_settings():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        data = request.get_json()
-        
-        try:
-            user.update_settings({
-                'email_notifications': data.get('email', True),
-                'session_reminders': data.get('sessions', True),
-                'message_notifications': data.get('messages', True)
-            })
-            db.session.commit()
-            return jsonify({'message': 'Notification settings updated successfully'})
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+@app.route('/api/network/connection-status')
+def connection_status():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
 
-    @app.route('/api/settings/theme', methods=['PUT'])
-    @jwt_required()
-    def update_theme_settings():
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
-        data = request.get_json()
-        
-        try:
-            user.update_settings({
-                'theme_preference': data.get('darkMode', False) and 'dark' or 'light'
-            })
-            db.session.commit()
-            return jsonify({'message': 'Theme settings updated successfully'})
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+    target_user_id = request.args.get('targetUserId')
+    if not target_user_id:
+        return jsonify({'error': 'Target user ID required'}), 400
 
-    # Add WebSocket support for real-time updates
-    from flask_socketio import SocketIO, emit, join_room, leave_room
-    socketio = SocketIO(app, cors_allowed_origins="*")
-
-    @socketio.on('connect')
-    @jwt_required()
-    def handle_connect():
-        user_id = get_jwt_identity()
-        join_room(f'user_{user_id}')
-        
-    @socketio.on('disconnect')
-    def handle_disconnect():
-        print('Client disconnected')
-
-    def notify_connection_update(user_id, data):
-        emit('connection_update', data, room=f'user_{user_id}')
-
-    return app
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        # Check if already connected
+        c.execute('''
+            SELECT 1 FROM connections
+            WHERE (user1_id = ? AND user2_id = ?)
+            OR (user1_id = ? AND user2_id = ?)
+        ''', (session['user_id'], target_user_id, target_user_id, session['user_id']))
+        if c.fetchone():
+            return jsonify({'status': 'connected'})
+        # Check if pending request
+        c.execute('''
+            SELECT 1 FROM connection_requests
+            WHERE sender_id = ? AND receiver_id = ? AND status = 'pending'
+        ''', (session['user_id'], target_user_id))
+        if c.fetchone():
+            return jsonify({'status': 'pending'})
+        return jsonify({'status': 'none'})
 
 if __name__ == '__main__':
-    app = create_app()
     app.run(debug=True)
