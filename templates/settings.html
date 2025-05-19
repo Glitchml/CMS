@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <title>Settings - ConferenceHub</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="../static/settings.css">
@@ -14,27 +15,27 @@
       <span>ConferenceHub</span>
     </div>
     <div class="nav-items">
-      <button class="nav-item">
+      <button class="nav-item" data-page="dashboard">
         <i class="fas fa-home"></i>
         <span>Dashboard</span>
         <div class="active-indicator"></div>
       </button>
-      <button class="nav-item">
+      <button class="nav-item" data-page="networking">
         <i class="fas fa-users"></i>
         <span>Networking</span>
         <div class="active-indicator"></div>
       </button>
-      <button class="nav-item">
+      <button class="nav-item" data-page="profile">
         <i class="fas fa-user"></i>
         <span>Profile</span>
         <div class="active-indicator"></div>
       </button>
-      <button class="nav-item">
+      <button class="nav-item" data-page="sessions">
         <i class="fas fa-video"></i>
         <span>Sessions</span>
         <div class="active-indicator"></div>
       </button>
-      <button class="nav-item active">
+      <button class="nav-item active" data-page="settings">
         <i class="fas fa-cog"></i>
         <span>Settings</span>
         <div class="active-indicator"></div>
@@ -57,62 +58,59 @@
 
   <main class="main-content">
     <h1 class="page-title">Settings</h1>
-    <!-- Add loading and error containers -->
     <div id="loadingIndicator" class="loading-indicator" style="display: none;">
       <i class="fas fa-spinner fa-spin"></i> Loading settings...
     </div>
     <div id="errorContainer" class="error-container" style="display: none;"></div>
     
-    <div class="settings-container" data-settings-endpoint="/api/settings/">
-      <!-- Profile Settings -->
+    <div class="settings-container">
+      <!-- Profile Info -->
       <div class="settings-card" data-endpoint="/api/settings/profile">
         <div class="settings-header">
           <i class="fas fa-user-edit"></i>
           <h2>Profile Info</h2>
         </div>
         <div class="form-group">
-          <label for="job-title">Job Title</label>
-          <input type="text" id="job-title" class="form-control" 
-                 data-field="jobTitle" required minlength="2"
-                 placeholder="Manager, Director, etc.">
-          <div class="field-error"></div>
-        </div>
-        <div class="form-group">
-          <label for="company">Company</label>
-          <input type="text" id="company" class="form-control" data-field="company">
-          <div class="field-error"></div>
-        </div>
-        <div class="form-group">
-          <label for="location">Location</label>
-          <input type="text" id="location" class="form-control" data-field="location">
-          <div class="field-error"></div>
-        </div>
-      </div>
-
-      <div class="settings-card" data-endpoint="/api/settings/password">
-        <div class="settings-header">
-          <i class="fas fa-user-edit"></i>
-          <h2>Profile Settings</h2>
-        </div>
-        <div class="form-group">
           <label for="full-name">Full Name</label>
-          <input type="text" id="full-name" class="form-control" data-field="name" value="John Doe" required>
+          <input type="text" id="full-name" class="form-control" data-field="fullName" required minlength="2">
           <div class="field-error"></div>
         </div>
         <div class="form-group">
           <label for="email">Email Address</label>
-          <input type="email" id="email" class="form-control" data-field="email" value="john@example.com" required>
+          <input type="email" id="email" class="form-control" data-field="email" required>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label for="job-title">Job Title</label>
+          <input type="text" id="job-title" class="form-control" data-field="jobTitle" required minlength="2">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label for="company">Company</label>
+          <input type="text" id="company" class="form-control" data-field="company" required minlength="2">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label for="location">Location</label>
+          <input type="text" id="location" class="form-control" data-field="location" required minlength="2">
           <div class="field-error"></div>
         </div>
         <div class="form-group">
           <label for="linkedin">LinkedIn Profile</label>
-          <input type="url" id="linkedin" class="form-control" data-field="linkedinUrl" placeholder="https://www.linkedin.com/in/yourprofile">
+          <input type="url" id="linkedin" class="form-control" data-field="linkedIn" placeholder="https://www.linkedin.com/in/yourprofile">
           <div class="field-error"></div>
+        </div>
+      </div>
+
+      <!-- Password Update -->
+      <div class="settings-card" data-endpoint="/api/settings/password">
+        <div class="settings-header">
+          <i class="fas fa-lock"></i>
+          <h2>Change Password</h2>
         </div>
         <div class="form-group">
           <label for="current-password">Current Password</label>
-          <input type="password" id="current-password" class="form-control" 
-                 data-field="currentPassword" required minlength="8">
+          <input type="password" id="current-password" class="form-control" data-field="currentPassword" required minlength="8">
           <div class="field-error"></div>
         </div>
         <div class="form-group">
@@ -172,7 +170,7 @@
       </div>
 
       <!-- Sign Out Section -->
-      <div class="settings-card" data-endpoint="/api/auth/signout">
+      <div class="settings-card" data-endpoint="/api/auth/logout">
         <div class="settings-header">
           <i class="fas fa-sign-out-alt"></i>
           <h2>Sign Out</h2>
@@ -185,9 +183,6 @@
         </button>
       </div>
 
-      <!-- Add CSRF token -->
-      <input type="hidden" name="_csrf" id="csrfToken">
-
       <!-- Action Buttons -->
       <div class="button-group">
         <button class="btn btn-secondary" id="cancel-btn" disabled>Cancel</button>
@@ -197,7 +192,7 @@
         </button>
       </div>
 
-      <!-- Add save status indicator -->
+      <!-- Save Status Indicator -->
       <div id="saveStatus" class="save-status" style="display: none;">
         <i class="fas fa-check"></i> Changes saved successfully
       </div>
@@ -205,167 +200,242 @@
   </main>
 
   <!-- Sign Out Modal -->
-  <div id="signOutModal" class="modal" style="display: none;"></div>
+  <div id="signOutModal" class="modal">
+  <div class="modal-container">
+      <div class="modal-icon" style="color: #357AFF; font-size: 2rem; margin-bottom: 1rem;">
+        <i class="fas fa-sign-out-alt"></i>
+      </div>
+      <h3 style="color: white; font-size: 1.25rem; margin-bottom: 1rem;">Sign Out</h3>
+      <p style="color: #9ca3af; margin-bottom: 1.5rem;">Are you sure you want to sign out of your account?</p>
+      <div style="display: flex; gap: 1rem;">
+        <button id="cancelSignOut" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+        <button id="confirmSignOut" class="btn btn-primary" style="flex: 1; background: #ef4444; color: white;">Sign Out</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Utility functions
     function sanitizeInput(input) {
-      return input.trim();
+      return input ? input.trim() : '';
     }
 
     async function fetchWithProtection(url, options = {}) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       return fetch(url, {
         ...options,
         credentials: 'same-origin',
         headers: {
           ...options.headers,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         }
       });
     }
 
     // Load settings on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      const userId = 'usr_123'; // Can come from auth or URL params
-      fetchSettings(userId);
-    });
+    window.addEventListener('DOMContentLoaded', async () => {
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const errorContainer = document.getElementById('errorContainer');
+      loadingIndicator.style.display = 'block';
 
-    // Fetch and populate user settings
-    async function fetchSettings(userId) {
       try {
-        const res = await fetch(`/api/settings/${userId}`);
-        if (!res.ok) throw new Error('Failed to load settings');
-        const data = await res.json();
+        // Fetch user profile data using the existing /api/profile/<user_id> endpoint
+        const userId = '{{ session.user_id }}'; // Injected via Flask
+        const profileRes = await fetchWithProtection(`/api/profile/${userId}`);
+        if (!profileRes.ok) throw new Error('Failed to load profile');
+        const profileData = await profileRes.json();
 
-        document.getElementById('full-name').value = data.profile.name || '';
-        document.getElementById('email').value = data.profile.email || '';
-        document.getElementById('job-title').value = data.profile.jobTitle || '';
-        document.getElementById('company').value = data.profile.company || '';
-        document.getElementById('location').value = data.profile.location || '';
-        document.getElementById('linkedin').value = data.profile.linkedinUrl || '';
-        document.getElementById('dark-mode-toggle').checked = data.preferences.darkMode || true;
-        document.getElementById('email-notifications').checked = data.preferences.notifications?.email || true;
-        document.getElementById('session-reminders').checked = data.preferences.notifications?.sessions || true;
-        document.getElementById('new-messages').checked = data.preferences.notifications?.messages || true;
+        // Fetch user settings (theme, notifications) - placeholder for now
+        const settingsRes = await fetchWithProtection('/api/settings');
+        const settingsData = await settingsRes.ok ? await settingsRes.json() : {};
 
+        // Populate fields
+        document.getElementById('full-name').value = profileData.name || '';
+        document.getElementById('email').value = profileData.email || '';
+        document.getElementById('job-title').value = profileData.jobTitle || '';
+        document.getElementById('company').value = profileData.company || '';
+        document.getElementById('location').value = profileData.location || '';
+        document.getElementById('linkedin').value = profileData.linkedIn || '';
+        document.getElementById('dark-mode-toggle').checked = settingsData.darkMode || false;
+        document.getElementById('email-notifications').checked = settingsData.emailNotifications || true;
+        document.getElementById('session-reminders').checked = settingsData.sessionReminders || true;
+        document.getElementById('new-messages').checked = settingsData.newMessages || true;
+
+        loadingIndicator.style.display = 'none';
       } catch (err) {
+        loadingIndicator.style.display = 'none';
+        errorContainer.style.display = 'block';
+        errorContainer.textContent = err.message || 'Failed to load settings';
         console.error('Error loading settings:', err);
       }
-    }
+    });
+
+    // Enable/disable save and cancel buttons on input change
+    const inputs = document.querySelectorAll('.form-control, .toggle-switch input');
+    const saveBtn = document.getElementById('save-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    let hasChanges = false;
+
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        hasChanges = true;
+        saveBtn.disabled = false;
+        cancelBtn.disabled = false;
+      });
+    });
 
     // Save button handler
-    document.getElementById('save-btn').addEventListener('click', async () => {
+    saveBtn.addEventListener('click', async () => {
+      if (!hasChanges) return;
+
+      const loadingIcon = saveBtn.querySelector('.fa-spinner');
+      const buttonText = saveBtn.querySelector('.button-text');
+      const saveStatus = document.getElementById('saveStatus');
+      const errorContainer = document.getElementById('errorContainer');
+
+      loadingIcon.style.display = 'inline-block';
+      buttonText.textContent = 'Saving...';
+      saveBtn.disabled = true;
+      cancelBtn.disabled = true;
+      errorContainer.style.display = 'none';
+
       try {
+        // Profile data
         const profileData = {
-          name: document.getElementById('full-name').value,
-          email: document.getElementById('email').value,
-          jobTitle: document.getElementById('job-title').value,
-          company: document.getElementById('company').value,
-          location: document.getElementById('location').value,
-          linkedinUrl: document.getElementById('linkedin').value
+          fullName: sanitizeInput(document.getElementById('full-name').value),
+          email: sanitizeInput(document.getElementById('email').value),
+          jobTitle: sanitizeInput(document.getElementById('job-title').value),
+          company: sanitizeInput(document.getElementById('company').value),
+          location: sanitizeInput(document.getElementById('location').value),
+          linkedIn: sanitizeInput(document.getElementById('linkedin').value)
         };
 
+        // Validate required fields
+        if (!profileData.fullName || profileData.fullName.length < 2) throw new Error('Full name must be at least 2 characters');
+        if (!profileData.email || !/\S+@\S+\.\S+/.test(profileData.email)) throw new Error('Invalid email address');
+        if (!profileData.jobTitle || profileData.jobTitle.length < 2) throw new Error('Job title must be at least 2 characters');
+        if (!profileData.company || profileData.company.length < 2) throw new Error('Company must be at least 2 characters');
+        if (!profileData.location || profileData.location.length < 2) throw new Error('Location must be at least 2 characters');
+
+        // Password data
         const passwordData = {
           currentPassword: document.getElementById('current-password').value,
           newPassword: document.getElementById('new-password').value,
           confirmPassword: document.getElementById('confirm-password').value
         };
 
+        // Validate password if new password is provided
+        let passwordUpdate = false;
+        if (passwordData.newPassword || passwordData.confirmPassword) {
+          if (!passwordData.currentPassword) throw new Error('Current password is required to update password');
+          if (passwordData.newPassword !== passwordData.confirmPassword) throw new Error('New passwords do not match');
+          if (passwordData.newPassword.length < 8) throw new Error('New password must be at least 8 characters');
+          passwordUpdate = true;
+        }
+
+        // Theme and notifications
+        const themeData = { darkMode: document.getElementById('dark-mode-toggle').checked };
         const notificationData = {
-          email: document.getElementById('email-notifications').checked,
-          sessions: document.getElementById('session-reminders').checked,
-          messages: document.getElementById('new-messages').checked
+          emailNotifications: document.getElementById('email-notifications').checked,
+          sessionReminders: document.getElementById('session-reminders').checked,
+          newMessages: document.getElementById('new-messages').checked
         };
 
-        const themeData = {
-          darkMode: document.getElementById('dark-mode-toggle').checked
-        };
-
-        // Send requests in parallel
-        const responses = await Promise.all([
+        // Send requests
+        const requests = [
           fetchWithProtection('/api/settings/profile', {
             method: 'PUT',
             body: JSON.stringify(profileData)
           }),
-          fetchWithProtection('/api/settings/password', {
+          fetchWithProtection('/api/settings/theme', {
             method: 'PUT',
-            body: JSON.stringify(passwordData)
+            body: JSON.stringify(themeData)
           }),
           fetchWithProtection('/api/settings/notifications', {
             method: 'PUT',
             body: JSON.stringify(notificationData)
-          }),
-          fetchWithProtection('/api/settings/theme', {
-            method: 'PUT',
-            body: JSON.stringify(themeData)
           })
-        ]);
+        ];
 
-        if (responses.every(res => res.ok)) {
-          alert('Settings saved successfully!');
-        } else {
-          alert('Some settings failed to save.');
+        if (passwordUpdate) {
+          requests.push(fetchWithProtection('/api/settings/password', {
+            method: 'PUT',
+            body: JSON.stringify(passwordData)
+          }));
         }
 
+        const responses = await Promise.all(requests);
+        const results = await Promise.all(responses.map(res => res.json()));
+
+        const errors = results.filter(r => r.error).map(r => r.error);
+        if (errors.length > 0) {
+          throw new Error(errors.join('; '));
+        }
+
+        // Update UI
+        saveStatus.style.display = 'block';
+        setTimeout(() => saveStatus.style.display = 'none', 3000);
+        hasChanges = false;
       } catch (err) {
-        console.error('Error saving settings:', err);
-        alert('Failed to save settings. Please try again.');
+        errorContainer.style.display = 'block';
+        errorContainer.textContent = err.message || 'Failed to save settings';
+      } finally {
+        loadingIcon.style.display = 'none';
+        buttonText.textContent = 'Save Changes';
+        saveBtn.disabled = !hasChanges;
+        cancelBtn.disabled = !hasChanges;
       }
     });
 
     // Cancel button functionality
-    document.getElementById('cancel-btn').addEventListener('click', () => {
+    cancelBtn.addEventListener('click', () => {
       window.location.reload();
     });
 
- // Navigation handler - Updated version
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    // Remove active class from all items
-    document.querySelectorAll('.nav-item').forEach(nav => {
-      nav.classList.remove('active');
+    // Navigation handler
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        const pageName = item.getAttribute('data-page');
+        const routes = {
+          'dashboard': '/dashboard',
+          'networking': '/networking',
+          'profile': '/profile',
+          'sessions': '/sessions',
+          'settings': '/settings'
+        };
+        if (routes[pageName]) {
+          window.location.href = routes[pageName];
+        }
+      });
     });
-    // Add active class to clicked item
-    item.classList.add('active');
-    
-    // Handle navigation using Flask routes
-    const pageName = item.querySelector('span').textContent.toLowerCase();
-    const routes = {
-      'dashboard': '/dashboard',
-      'networking': '/networking',
-      'profile': '/profile',
-      'sessions': '/sessions',
-      'settings': '/settings'
-    };
-    
-    if (routes[pageName]) {
-      window.location.href = routes[pageName];
-    }
-  });
-});
 
     // Sign out modal logic
     const signOutModal = document.getElementById('signOutModal');
     const signOutBtn = document.getElementById('signOutBtn');
-    const cancelSignOut = document.getElementById('cancelSignOut');
-    const confirmSignOut = document.getElementById('confirmSignOut');
 
     signOutBtn.addEventListener('click', () => {
       signOutModal.style.display = 'flex';
     });
 
-    document.getElementById('cancelSignOut')?.addEventListener('click', () => {
+    document.getElementById('cancelSignOut').addEventListener('click', () => {
       signOutModal.style.display = 'none';
     });
 
-    document.getElementById('confirmSignOut')?.addEventListener('click', async () => {
+    document.getElementById('confirmSignOut').addEventListener('click', async () => {
       try {
-        await fetchWithProtection('/api/auth/signout', { method: 'POST' });
+        const res = await fetchWithProtection('/api/auth/logout', { method: 'POST' });
+        if (!res.ok) throw new Error('Sign out failed');
         localStorage.clear();
         sessionStorage.clear();
-        window.location.href = 'landing.html';
+        window.location.href = '/';
       } catch (err) {
         console.error('Sign out failed:', err);
+        const errorContainer = document.getElementById('errorContainer');
+        errorContainer.style.display = 'block';
+        errorContainer.textContent = err.message || 'Sign out failed';
       }
     });
 
@@ -382,44 +452,6 @@ document.querySelectorAll('.nav-item').forEach(item => {
         signOutModal.style.display = 'none';
       }
     });
-
-    // Inject modal HTML dynamically if not present
-    if (!document.getElementById('signOutModal')) {
-      const modalHTML = `
-        <div id="signOutModal" class="modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;">
-          <div class="modal-container" style="background: rgba(26, 26, 26, 0.95); backdrop-filter: blur(16px); padding: 2rem; border-radius: 1rem; width: 90%; max-width: 400px; text-align: center;">
-            <div class="modal-icon" style="color: #357AFF; font-size: 2rem; margin-bottom: 1rem;">
-              <i class="fas fa-sign-out-alt"></i>
-            </div>
-            <h3 style="color: white; font-size: 1.25rem; margin-bottom: 1rem;">Sign Out</h3>
-            <p style="color: #9ca3af; margin-bottom: 1.5rem;">Are you sure you want to sign out of your account?</p>
-            <div style="display: flex; gap: 1rem;">
-              <button id="cancelSignOut" class="btn btn-secondary" style="flex: 1;">Cancel</button>
-              <button id="confirmSignOut" class="btn btn-primary" style="flex: 1; background: #ef4444; color: white;">Sign Out</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-      // Reattach event listeners after injecting modal
-      document.getElementById('signOutBtn').addEventListener('click', () => {
-        signOutModal.style.display = 'flex';
-      });
-      document.getElementById('cancelSignOut')?.addEventListener('click', () => {
-        signOutModal.style.display = 'none';
-      });
-      document.getElementById('confirmSignOut')?.addEventListener('click', async () => {
-        try {
-          await fetchWithProtection('/api/auth/signout', { method: 'POST' });
-          localStorage.clear();
-          sessionStorage.clear();
-          window.location.href = 'landing.html';
-        } catch (err) {
-          console.error('Sign out failed:', err);
-        }
-      });
-    }
   </script>
 </body>
 </html>
