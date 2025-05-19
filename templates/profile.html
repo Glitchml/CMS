@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ConferenceHub Profile</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css ">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="../static/profile.css">
   <meta name="csrf-token" content="${csrfToken}">
   <style>
@@ -53,8 +53,8 @@
             <i class="fas fa-user-circle"></i>
           </div>
           <div class="user-info">
-            <div class="user-name">{{ full_name }}</div>
-            <div class="user-email">{{ email }}</div>
+            <div class="user-name" id="sidebarFullName">{{ full_name }}</div>
+            <div class="user-email" id="sidebarEmail">{{ email }}</div>
           </div>
         </div>
       </div>
@@ -91,35 +91,35 @@
             </form>
           </div>
           <div class="profile-details">
-            <h2 class="profile-name" id="profileName">John Doe</h2>
-            <p class="profile-email" id="profileEmail">john@example.com</p>
+            <h2 class="profile-name" id="profileName"></h2>
+            <p class="profile-email" id="profileEmail"></p>
             <div class="profile-info-list">
               <div class="profile-info-item">
                 <div class="info-icon"><i class="fas fa-briefcase"></i></div>
                 <div class="info-content">
                   <div class="info-label">Job Title</div>
-                  <div class="info-value" id="jobTitle">Senior Product Manager</div>
+                  <div class="info-value" id="jobTitle"></div>
                 </div>
               </div>
               <div class="profile-info-item">
                 <div class="info-icon"><i class="fas fa-building"></i></div>
                 <div class="info-content">
                   <div class="info-label">Company</div>
-                  <div class="info-value" id="company">TechInnovate Solutions</div>
+                  <div class="info-value" id="company"></div>
                 </div>
               </div>
               <div class="profile-info-item">
                 <div class="info-icon"><i class="fas fa-map-marker-alt"></i></div>
                 <div class="info-content">
                   <div class="info-label">Location</div>
-                  <div class="info-value" id="location">San Francisco, CA</div>
+                  <div class="info-value" id="location"></div>
                 </div>
               </div>
               <div class="profile-info-item">
                 <div class="info-icon"><i class="fas fa-calendar-alt"></i></div>
                 <div class="info-content">
                   <div class="info-label">Member Since</div>
-                  <div class="info-value" id="memberSince">March 12, 2023</div>
+                  <div class="info-value" id="memberSince"></div>
                 </div>
               </div>
             </div>
@@ -200,39 +200,47 @@
     }
 
     async function fetchWithProtection(url, options = {}) {
+      const csrfToken = document.getElementById('csrfToken').value;
       return fetch(url, {
         ...options,
         credentials: 'same-origin',
         headers: {
           ...options.headers,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         }
       });
     }
 
     // Load profile on page load
     window.addEventListener('DOMContentLoaded', () => {
-      const userId = 'usr_123'; // This can come from auth or URL param
+      const userId = '{{ session["user_id"] }}'; // Use Flask session for logged-in user
+      if (!userId) {
+        window.location.href = '/login';
+        return;
+      }
       fetchProfileData(userId);
       fetchStats(userId);
       fetchUpcomingSessions(userId);
+      updateSidebar(userId); // Update sidebar with fetched data
     });
 
     // Fetch and display profile info
     async function fetchProfileData(userId) {
       try {
-        const res = await fetch(`/api/profile/${userId}`);
+        const res = await fetchWithProtection(`/api/profile/${userId}`);
         if (!res.ok) throw new Error('Failed to fetch profile');
         const data = await res.json();
 
-        document.getElementById('profileName').textContent = data.name;
-        document.getElementById('profileEmail').textContent = data.email;
+        document.getElementById('profileName').textContent = data.name || 'Not specified';
+        document.getElementById('profileEmail').textContent = data.email || 'Not specified';
         document.getElementById('jobTitle').textContent = data.jobTitle || 'Not specified';
         document.getElementById('company').textContent = data.company || 'Not specified';
         document.getElementById('location').textContent = data.location || 'Not specified';
-        document.getElementById('memberSince').textContent = formatDate(data.memberSince);
-
+        document.getElementById('memberSince').textContent = formatDate(data.memberSince) || 'Not specified';
       } catch (err) {
+        document.getElementById('errorState').textContent = 'Error loading profile: ' + err.message;
+        document.getElementById('errorState').style.display = 'block';
         console.error('Error loading profile:', err);
       }
     }
@@ -240,13 +248,12 @@
     // Fetch stats
     async function fetchStats(userId) {
       try {
-        const res = await fetch(`/api/profile/stats?userId=${userId}`);
+        const res = await fetchWithProtection(`/api/profile/stats?userId=${userId}`);
         const data = await res.json();
 
         document.getElementById('sessionsAttended').textContent = data.sessionsAttended || 0;
         document.getElementById('presentationsGiven').textContent = data.presentationsGiven || 0;
         document.getElementById('connectionsMade').textContent = data.connections || 0;
-
       } catch (err) {
         console.error('Failed to fetch stats:', err);
       }
@@ -255,7 +262,7 @@
     // Fetch upcoming sessions
     async function fetchUpcomingSessions(userId) {
       try {
-        const res = await fetch(`/api/profile/sessions?userId=${userId}&type=upcoming`);
+        const res = await fetchWithProtection(`/api/profile/sessions?userId=${userId}&type=upcoming`);
         const sessions = await res.json();
 
         const container = document.getElementById('upcomingSessionsContainer');
@@ -283,43 +290,46 @@
           `;
           container.appendChild(item);
         });
-
       } catch (err) {
         console.error('Failed to fetch sessions:', err);
       }
     }
 
+    // Update sidebar with fetched data
+    async function updateSidebar(userId) {
+      try {
+        const res = await fetchWithProtection(`/api/profile/${userId}`);
+        const data = await res.json();
+        document.getElementById('sidebarFullName').textContent = data.name || 'Not specified';
+        document.getElementById('sidebarEmail').textContent = data.email || 'Not specified';
+      } catch (err) {
+        console.error('Error updating sidebar:', err);
+      }
+    }
+
     // Format date utility
     function formatDate(dateStr) {
+      if (!dateStr) return '';
       const date = new Date(dateStr);
       return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
-// Navigation handler - Updated version
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    // Remove active class from all items
-    document.querySelectorAll('.nav-item').forEach(nav => {
-      nav.classList.remove('active');
+    // Navigation handler
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        const routes = {
+          'dashboard': '/dashboard',
+          'networking': '/networking',
+          'profile': '/profile',
+          'sessions': '/sessions',
+          'settings': '/settings'
+        };
+        if (routes[pageName]) window.location.href = routes[pageName];
+      });
     });
-    // Add active class to clicked item
-    item.classList.add('active');
-    
-    // Handle navigation using Flask routes
-    const pageName = item.querySelector('span').textContent.toLowerCase();
-    const routes = {
-      'dashboard': '/dashboard',
-      'networking': '/networking',
-      'profile': '/profile',
-      'sessions': '/sessions',
-      'settings': '/settings'
-    };
-    
-    if (routes[pageName]) {
-      window.location.href = routes[pageName];
-    }
-  });
-});
 
     // Edit profile button
     document.getElementById('editProfileBtn').addEventListener('click', () => {
