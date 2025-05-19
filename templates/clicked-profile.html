@@ -25,12 +25,12 @@
         <span>Dashboard</span>
         <div class="active-indicator"></div>
       </button>
-      <button class="nav-item" onclick="window.location.href='/networking-page'">
+      <button class="nav-item" onclick="window.location.href='/networking'">
         <i class="fas fa-users"></i>
         <span>Networking</span>
         <div class="active-indicator"></div>
       </button>
-      <button class="nav-item " onclick="window.location.href='/profile'">
+      <button class="nav-item" onclick="window.location.href='/profile'">
         <i class="fas fa-user"></i>
         <span>Profile</span>
         <div class="active-indicator"></div>
@@ -40,7 +40,7 @@
         <span>Sessions</span>
         <div class="active-indicator"></div>
       </button>
-      <button class="nav-item" onclick="window.location.href='settings'">
+      <button class="nav-item" onclick="window.location.href='/settings'">
         <i class="fas fa-cog"></i>
         <span>Settings</span>
         <div class="active-indicator"></div>
@@ -53,8 +53,8 @@
             <i class="fas fa-user-circle"></i>
           </div>
           <div class="user-info">
-            <div class="user-name">John Doe</div>
-            <div class="user-email">john@example.com</div>
+            <div class="user-name" id="sidebarFullName"></div>
+            <div class="user-email" id="sidebarEmail"></div>
           </div>
         </div>
       </div>
@@ -82,11 +82,8 @@
             </div>
           </div>
           <div class="profile-details">
-            <div class="loading-indicator">
-              <i class="fas fa-spinner fa-spin"></i>
-            </div>
-            <h2 class="profile-name" id="profileName">John Doe</h2>
-            <p class="profile-email" id="profileEmail">john@example.com</p>
+            <h2 class="profile-name" id="profileName"></h2>
+            <p class="profile-email" id="profileEmail"></p>
             <div class="profile-info-list">
               <div class="profile-info-item">
                 <div class="info-icon">
@@ -94,7 +91,7 @@
                 </div>
                 <div class="info-content">
                   <div class="info-label">Job Title</div>
-                  <div class="info-value" id="jobTitle">Senior Product Manager</div>
+                  <div class="info-value" id="jobTitle"></div>
                 </div>
               </div>
               <div class="profile-info-item">
@@ -103,7 +100,7 @@
                 </div>
                 <div class="info-content">
                   <div class="info-label">Company</div>
-                  <div class="info-value" id="company">TechInnovate Solutions</div>
+                  <div class="info-value" id="company"></div>
                 </div>
               </div>
               <div class="profile-info-item">
@@ -112,7 +109,7 @@
                 </div>
                 <div class="info-content">
                   <div class="info-label">Location</div>
-                  <div class="info-value" id="location">San Francisco, CA</div>
+                  <div class="info-value" id="location"></div>
                 </div>
               </div>
               <div class="profile-info-item">
@@ -121,7 +118,7 @@
                 </div>
                 <div class="info-content">
                   <div class="info-label">Member Since</div>
-                  <div class="info-value" id="memberSince">March 12, 2023</div>
+                  <div class="info-value" id="memberSince"></div>
                 </div>
               </div>
               <div class="profile-actions"> 
@@ -140,9 +137,6 @@
       <!-- Conference Stats Section -->
       <div class="profile-stats-section" data-endpoint="/api/profile/stats">
         <div class="profile-card-container">
-          <div class="loading-indicator">
-            <i class="fas fa-spinner fa-spin"></i>
-          </div>
           <div class="card-header">
             <h3 class="card-title">Conference Stats</h3>
           </div>
@@ -164,9 +158,6 @@
 
             <!-- Session History -->
             <div class="session-history" data-endpoint="/api/profile/sessions">
-              <div class="loading-indicator">
-                <i class="fas fa-spinner fa-spin"></i>
-              </div>
               <div class="card-header" style="padding: 0 0 1rem 0;">
                 <h3 class="card-title">Session History</h3>
               </div>
@@ -177,14 +168,12 @@
       </div>
     </div>
 
-    <!-- Add status messages container -->
     <div id="statusMessages" class="status-messages" style="display: none;">
       <div class="success-message"></div>
       <div class="error-message"></div>
     </div>
 
-    <!-- Add CSRF token input -->
-    <input type="hidden" name="_csrf" id="csrfToken">
+    <input type="hidden" name="_csrf" id="csrfToken" value="${csrfToken}">
   </div>
 
   <script>
@@ -194,39 +183,48 @@
     }
 
     async function fetchWithProtection(url, options = {}) {
+      const csrfToken = document.getElementById('csrfToken').value;
       return fetch(url, {
         ...options,
         credentials: 'same-origin',
         headers: {
           ...options.headers,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         }
       });
     }
 
     // Load profile on page load
     window.addEventListener('DOMContentLoaded', () => {
-      const userId = new URLSearchParams(window.location.search).get('userId') || 'usr_123';
+      const userId = new URLSearchParams(window.location.search).get('userId');
+      if (!userId) {
+        window.location.href = '/networking';
+        return;
+      }
       fetchProfileData(userId);
       fetchStats(userId);
       fetchSessionHistory(userId);
+      setupProfileActions(userId);
+      updateSidebar(userId); // Update sidebar with fetched data
     });
 
     // Fetch and display user profile info
     async function fetchProfileData(userId) {
       try {
-        const res = await fetch(`/api/profile/${userId}`);
+        const res = await fetchWithProtection(`/api/profile/${userId}`);
         if (!res.ok) throw new Error('Failed to fetch profile');
         const data = await res.json();
 
-        document.getElementById('profileName').textContent = data.name;
-        document.getElementById('profileEmail').textContent = data.email;
+        document.getElementById('profileName').textContent = data.name || 'Not specified';
+        document.getElementById('profileEmail').textContent = data.email || 'Not specified';
         document.getElementById('jobTitle').textContent = data.jobTitle || 'Not specified';
         document.getElementById('company').textContent = data.company || 'Not specified';
         document.getElementById('location').textContent = data.location || 'Not specified';
-        document.getElementById('memberSince').textContent = formatDate(data.memberSince);
-
+        document.getElementById('memberSince').textContent = formatDate(data.memberSince) || 'Not specified';
       } catch (err) {
+        document.getElementById('errorState').textContent = 'Error loading profile: ' + err.message;
+        document.getElementById('errorState').style.display = 'block';
         console.error('Error loading profile:', err);
       }
     }
@@ -234,13 +232,12 @@
     // Fetch statistics
     async function fetchStats(userId) {
       try {
-        const res = await fetch(`/api/profile/stats?userId=${userId}`);
+        const res = await fetchWithProtection(`/api/profile/stats?userId=${userId}`);
         const data = await res.json();
 
         document.getElementById('sessionsAttended').textContent = data.sessionsAttended || 0;
         document.getElementById('presentationsGiven').textContent = data.presentationsGiven || 0;
         document.getElementById('connectionsMade').textContent = data.connections || 0;
-
       } catch (err) {
         console.error('Failed to fetch stats:', err);
       }
@@ -249,10 +246,9 @@
     // Fetch session history
     async function fetchSessionHistory(userId) {
       try {
-        const res = await fetch(`/api/profile/sessions?userId=${userId}&type=history`);
+        const res = await fetchWithProtection(`/api/profile/sessions?userId=${userId}&type=history`);
         const sessions = await res.json();
         renderSessionHistory(sessions);
-
       } catch (err) {
         console.error('Failed to fetch session history:', err);
       }
@@ -298,6 +294,18 @@
       }
     }
 
+    // Update sidebar with fetched data
+    async function updateSidebar(userId) {
+      try {
+        const res = await fetchWithProtection(`/api/profile/${userId}`);
+        const data = await res.json();
+        document.getElementById('sidebarFullName').textContent = data.name || 'Not specified';
+        document.getElementById('sidebarEmail').textContent = data.email || 'Not specified';
+      } catch (err) {
+        console.error('Error updating sidebar:', err);
+      }
+    }
+
     // Format date utility
     function formatDate(dateStr) {
       if (!dateStr) return '';
@@ -305,33 +313,13 @@
       return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
 
-    // Navigation handler
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const pageName = item.querySelector('span').textContent.toLowerCase();
-        const routes = {
-          dashboard: '/dashboard',
-          networking: '/networking-page',
-          profile: '/profile',
-          sessions: '/sessions',
-          settings: '/settings'
-        };
-        window.location.href = routes[pageName] || '#';
-      });
-    });
-
-    // Add click handler for edit profile button
-    document.querySelector('.edit-profile-btn')?.addEventListener('click', () => {
-      alert('Edit profile feature would open here');
-    });
-
-    // Add these functions to your existing script
+    // Connection status and actions
     async function checkConnectionStatus(userId) {
       try {
-        const res = await fetch(`/api/network/connection-status?targetUserId=${userId}`);
+        const res = await fetchWithProtection(`/api/network/connection-status?targetUserId=${userId}`);
         if (res.ok) {
           const data = await res.json();
-          return data.status; // 'connected', 'pending', or 'none'
+          return data.status || 'none';
         }
         return 'none';
       } catch (err) {
@@ -341,11 +329,10 @@
     }
 
     async function setupProfileActions(userId) {
-      const currentUserId = sessionStorage.getItem('userId'); // You'll need to set this on login
+      const currentUserId = '{{ session["user_id"] }}'; // Use Flask session for logged-in user
       const requestBtn = document.getElementById('requestConnectionBtn');
       const messageBtn = document.getElementById('messageBtn');
-      
-      // Hide buttons if viewing own profile
+
       if (parseInt(userId) === parseInt(currentUserId)) {
         requestBtn.style.display = 'none';
         messageBtn.style.display = 'none';
@@ -353,8 +340,7 @@
       }
 
       const connectionStatus = await checkConnectionStatus(userId);
-      
-      // Set up request connection button
+
       if (connectionStatus === 'connected') {
         requestBtn.innerHTML = '<i class="fas fa-check"></i> Connected';
         requestBtn.disabled = true;
@@ -364,47 +350,55 @@
       } else {
         requestBtn.addEventListener('click', async () => {
           try {
-            const res = await fetch('/api/network/request-connection', {
+            const res = await fetchWithProtection('/api/network/request-connection', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ targetUserId: userId })
             });
-            
             if (res.ok) {
               requestBtn.innerHTML = '<i class="fas fa-clock"></i> Request Pending';
               requestBtn.disabled = true;
-              alert('Connection request sent!');
+              document.getElementById('statusMessages').style.display = 'block';
+              document.querySelector('.success-message').textContent = 'Connection request sent!';
             }
           } catch (err) {
             console.error('Failed to send request:', err);
+            document.getElementById('statusMessages').style.display = 'block';
+            document.querySelector('.error-message').textContent = 'Failed to send request.';
           }
         });
       }
 
-      // Set up message button
       messageBtn.addEventListener('click', async () => {
         try {
-          const res = await fetch(`/api/profile/${userId}`);
+          const res = await fetchWithProtection(`/api/profile/${userId}`);
           const profile = await res.json();
-          
           if (profile.linkedIn) {
             window.open(profile.linkedIn, '_blank');
           } else {
-            alert('This user has not linked their LinkedIn profile');
+            document.getElementById('statusMessages').style.display = 'block';
+            document.querySelector('.error-message').textContent = 'This user has not linked their LinkedIn profile.';
           }
         } catch (err) {
           console.error('Error fetching profile:', err);
+          document.getElementById('statusMessages').style.display = 'block';
+          document.querySelector('.error-message').textContent = 'Error fetching profile.';
         }
       });
     }
 
-    // Update your DOMContentLoaded event listener
-    window.addEventListener('DOMContentLoaded', () => {
-      const userId = new URLSearchParams(window.location.search).get('userId') || 'usr_123';
-      fetchProfileData(userId);
-      fetchStats(userId);
-      fetchSessionHistory(userId);
-      setupProfileActions(userId); // Add this line
+    // Navigation handler
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pageName = item.querySelector('span').textContent.toLowerCase();
+        const routes = {
+          dashboard: '/dashboard',
+          networking: '/networking',
+          profile: '/profile',
+          sessions: '/sessions',
+          settings: '/settings'
+        };
+        window.location.href = routes[pageName] || '#';
+      });
     });
   </script>
 </body>
