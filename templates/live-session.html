@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ConferenceHub - Active Session</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="../static/sessions.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <!-- Main content -->
+  <main class="main-content">
+    <div class="card">
+      <h3 id="sessionTitle" class="card-title"><i class="fas fa-video"></i> {{ session_title }}</h3>
+
+      <div style="margin-bottom: 1rem; text-align: center;">
+        <h4 id="sessionTimeCountdown" class="card-title" style="color: #357AFF;">
+          <i class="fas fa-clock"></i> Time Remaining: <span id="countdownDisplay">--:--</span>
+        </h4>
+      </div>
+
+      <p id="sessionDescription" class="session-description"></p>
+
+      <div class="session-layout">
+        <div>
+          <div class="qa-section">
+            <h4 class="card-title"><i class="fas fa-question-circle"></i> Ask a Question</h4>
+            <form id="questionForm" class="session-form">
+              <div class="form-group">
+                <label class="input-label">Your Name (optional)</label>
+                <input type="text" class="input" placeholder="Enter your name (optional)" id="userName"/>
+              </div>
+              <div class="form-group">
+                <label class="input-label">Your Question</label>
+                <textarea class="input" rows="4" id="userQuestion" placeholder="Type your question here..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Submit Question</button>
+            </form>
+          </div>
+
+          <div id="questionsContainer" class="questions-container"></div>
+
+          <div class="session-controls" data-leave-endpoint="/api/sessions/{{ session_id }}/leave">
+            <button class="control-button">
+              <i class="fas fa-desktop"></i>
+              <span>Share</span>
+            </button>
+            <button class="control-button" id="leaveButton">
+              <i class="fas fa-phone-slash"></i>
+              <span>Leave</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card participant-list" data-participants-endpoint="/api/sessions/{{ session_id }}/participants">
+          <h4 class="card-title"><i class="fas fa-users"></i> Participants (<span id="participantCount">0</span>)</h4>
+          <div id="participantList" class="participants-container"></div>
+<style>
+.participants-container li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.participants-container li:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+.participants-container li i {
+  font-size: 1.2em;
+  color: #007bff;
+}
+</style>
+        </div>
+      </div>
+
+      <div id="errorMessages" class="error-container" style="display: none;"></div>
+    </div>
+  </main>
+
+  <script>
+    const sessionId = '{{ session_id }}';
+
+    // Load session details and participants on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      fetch(`/api/sessions/${sessionId}`)
+        .then(res => res.json())
+        .then(data => renderSessionDetails(data))
+        .catch(err => console.error('Failed to load session:', err));
+
+      fetch(`/api/sessions/${sessionId}/participants`)
+        .then(res => res.json())
+        .then(participants => renderParticipants(participants))
+        .catch(err => console.error('Failed to load participants:', err));
+
+      fetchQuestions();
+      setupWebSocket();
+    });
+
+    function renderSessionDetails(session) {
+      document.getElementById('sessionTitle').textContent = session.title;
+      document.getElementById('sessionDescription').textContent = session.description || 'No description provided.';
+      startCountdown(session.date, session.duration);
+    }
+
+    function viewProfile(userId) {
+  window.location.href = `/clicked-profile?userId=${userId}`;
+}
+
+function renderParticipants(participants) {
+      const list = document.getElementById('participantList');
+      const count = document.getElementById('participantCount');
+      list.innerHTML = '';
+      if (participants.length === 0) {
+        list.innerHTML = '<li>No participants yet.</li>';
+        count.textContent = '0';
+        return;
+      }
+      participants.forEach(p => {
+        const li = document.createElement('li');
+li.addEventListener('click', () => viewProfile(p.id));
+        li.innerHTML = `<i class="fas fa-user-circle"></i> ${p.name} (${p.role})`;
+        li.dataset.userId = p.id;
+        list.appendChild(li);
+      });
+      count.textContent = participants.length;
+    }
+
+    function fetchQuestions() {
+      fetch(`/api/sessions/${sessionId}/questions`)
+        .then(res => res.json())
+        .then(questions => {
+          const container = document.getElementById('questionsContainer');
+          container.innerHTML = '';
+          questions.forEach(q => {
+            const div = document.createElement('div');
+            div.className = 'question-item';
+            div.innerHTML = `
+              <strong>${q.askedBy || 'Anonymous'}:</strong>
+              <p>${q.question}</p>
+            `;
+            container.appendChild(div);
+          });
+        })
+        .catch(err => console.error('Failed to load questions:', err));
+    }
+
+    function startCountdown(startTime, durationMinutes) {
+      const endTime = new Date(startTime);
+      endTime.setMinutes(endTime.getMinutes() + durationMinutes);
+
+      function updateCountdown() {
+        const now = new Date();
+        const diff = endTime - now;
+        if (diff <= 0) {
+          clearInterval(timer);
+          document.getElementById('sessionTimeCountdown').textContent = "Session has ended.";
+          return;
+        }
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        document.getElementById('sessionTimeCountdown').textContent = `Time Remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+
+      updateCountdown();
+      const timer = setInterval(updateCountdown, 1000);
+    }
+
+    // Handle question submission
+    document.getElementById('questionForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const question = document.getElementById('userQuestion').value.trim();
+
+      if (!question) {
+        alert("Please enter a question.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/sessions/${sessionId}/questions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ question })
+        });
+
+        if (res.ok) {
+          alert("Your question has been submitted!");
+          document.getElementById('userQuestion').value = '';
+          document.getElementById('userName').value = '';
+        } else {
+          const errorData = await res.json();
+          alert(`Failed to submit question: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (err) {
+        console.error("Error submitting question:", err);
+        alert("Could not submit your question at this time.");
+      }
+    });
+
+    // Leave session handler
+    document.getElementById('leaveButton').addEventListener('click', async () => {
+      if (confirm("Are you sure you want to leave this session?")) {
+        try {
+          const res = await fetch(`/api/sessions/${sessionId}/leave`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ sessionId })
+          });
+          if (res.ok) {
+            window.location.href = '/sessions';
+          } else {
+            const errorData = await res.json();
+            alert(`Failed to leave session: ${errorData.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('Failed to leave session:', error);
+          alert('Could not leave session at this time.');
+        }
+      }
+    });
+
+    // WebSocket for real-time updates
+    function setupWebSocket() {
+      const socket = io('http://localhost:5000', {
+        withCredentials: true
+      });
+
+      socket.on('connect', () => {
+        console.log('Socket.IO connected');
+        socket.emit('join_session', { sessionId });
+      });
+
+      socket.on('new_question', (data) => {
+        const container = document.getElementById('questionsContainer');
+        const div = document.createElement('div');
+        div.className = 'question-item';
+        div.innerHTML = `
+          <strong>${data.name || 'Anonymous'}:</strong>
+          <p>${data.question}</p>
+        `;
+        container.appendChild(div);
+      });
+
+      socket.on('participant_joined', (data) => {
+        const list = document.getElementById('participantList');
+        const li = document.createElement('li');
+li.addEventListener('click', () => viewProfile(p.id));
+        li.innerHTML = `<i class="fas fa-user-circle"></i> ${data.name} (${data.role})`;
+        li.dataset.userId = data.id;
+        list.appendChild(li);
+        const count = document.getElementById('participantCount');
+        count.textContent = parseInt(count.textContent) + 1;
+      });
+
+      socket.on('participant_left', (data) => {
+        const list = document.getElementById('participantList');
+        const items = list.getElementsByTagName('li');
+        for (let item of items) {
+          if (item.dataset.userId === String(data.userId)) {
+            item.remove();
+            break;
+          }
+        }
+        const count = document.getElementById('participantCount');
+        count.textContent = parseInt(count.textContent) - 1;
+      });
+
+      socket.on('session_end', () => {
+        document.getElementById('sessionTimeCountdown').textContent = "Session has ended.";
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Socket.IO disconnected');
+        setTimeout(setupWebSocket, 5000);
+      });
+    }
+  </script>
+</body>
+</html>
