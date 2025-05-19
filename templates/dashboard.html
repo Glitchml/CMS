@@ -86,6 +86,174 @@
       <div class="sessions-list" id="sessionsList" data-join-endpoint="/api/sessions/{sessionId}/join">
         <!-- Session cards will be dynamically loaded here -->
       </div>
+      <style>
+        .session-card {
+          display: flex;
+          align-items: flex-start;
+          padding: 1.25rem;
+          margin-bottom: 1.5rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+          background: rgba(255,255,255,0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.1);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          overflow: hidden;
+          position: relative;
+        }
+        
+        .session-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+          border-color: rgba(53, 122, 255, 0.3);
+        }
+        
+        .color-block {
+          width: 56px;
+          height: 56px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          margin-right: 1.25rem;
+          font-size: 1.25rem;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .session-details {
+          flex-grow: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        
+        .session-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 0.25rem;
+        }
+        
+        .session-details h3 {
+          margin: 0;
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: white;
+        }
+        
+        .session-date {
+          font-size: 0.8rem;
+          color: #9ca3af;
+          background: rgba(255,255,255,0.05);
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          display: inline-block;
+        }
+        
+        .session-description {
+          margin: 0.25rem 0 0.75rem 0;
+          font-size: 0.875rem;
+          color: #d1d5db;
+          line-height: 1.4;
+          max-height: 2.8em;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+        
+        .session-meta {
+          display: flex;
+          gap: 1rem;
+          margin-top: 0.25rem;
+        }
+        
+        .session-type, .session-duration {
+          font-size: 0.75rem;
+          color: #9ca3af;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+        
+        .session-type i, .session-duration i {
+          font-size: 0.875rem;
+          color: #357AFF;
+        }
+        
+        .join-button {
+          padding: 0.625rem 1.25rem;
+          border-radius: 8px;
+          background: #357AFF;
+          color: white;
+          border: none;
+          cursor: pointer;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          transition: all 0.2s ease;
+          margin-top: 0.75rem;
+          align-self: flex-start;
+        }
+        
+        .join-button:hover {
+          background: #2a62d6;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(53, 122, 255, 0.25);
+        }
+        
+        .join-button:active {
+          transform: translateY(0);
+        }
+        
+        .no-sessions {
+          text-align: center;
+          padding: 2rem;
+          color: #9ca3af;
+        }
+        
+        .empty-icon {
+          font-size: 2.5rem;
+          margin-bottom: 1rem;
+          color: #4b5563;
+        }
+      </style>
+      <script>
+        function renderSessionCard(session) {
+          const card = document.createElement('div');
+          card.className = 'session-card';
+          
+          const initials = session.title.slice(0, 2).toUpperCase();
+          
+          // Generate a random color if none is provided
+          const sessionColors = ['#357AFF', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+          const color = session.color || sessionColors[Math.floor(Math.random() * sessionColors.length)];
+          
+          card.innerHTML = `
+            <div class="color-block" style="background-color: ${color}">${initials}</div>
+            <div class="session-details">
+              <div class="session-header">
+                <h3>${session.title}</h3>
+                <span class="session-date"><i class="fas fa-calendar-alt"></i> ${formatDate(session.date) || 'TBD'}</span>
+              </div>
+              <p class="session-description">${session.description || 'No description available'}</p>
+              <div class="session-meta">
+                <span class="session-type"><i class="fas fa-tag"></i> ${session.type || 'General'}</span>
+                <span class="session-duration"><i class="fas fa-clock"></i> ${session.duration || '60'} min</span>
+              </div>
+            </div>
+            <button class="join-button" onclick="joinSession('${session.id}')">
+              <i class="fas fa-sign-in-alt"></i> Join Session
+            </button>
+          `;
+          
+          return card;
+        }
+      </script>
     </section>
 
     <!-- Add WebSocket status indicator -->
@@ -100,23 +268,7 @@
     </div>
   </main>
 
-  <!-- Add session card template -->
-  <template id="sessionCardTemplate">
-    <div class="session-card" data-session-id="">
-      <div class="session-header">
-        <h3 class="session-title"></h3>
-        <span class="session-date"></span>
-      </div>
-      <p class="session-description"></p>
-      <div class="session-meta">
-        <span class="session-type"></span>
-        <span class="session-duration"></span>
-      </div>
-      <button class="btn btn-primary join-button">
-        <i class="fas fa-sign-in-alt"></i> Join Session
-      </button>
-    </div>
-  </template>
+
 
   <!-- Add CSRF token input -->
   <input type="hidden" name="_csrf" id="csrfToken" value="${csrfToken}">
@@ -190,22 +342,8 @@
       }
 
       sessions.forEach(session => {
-        const card = document.createElement('div');
-        card.className = 'session-card';
-        card.innerHTML = `
-          <div class="session-header">
-            <h3 class="session-title">${session.title}</h3>
-            <span class="session-date">${formatDate(session.date)}</span>
-          </div>
-          <p class="session-description">${session.description || ''}</p>
-          <div class="session-meta">
-            <span class="session-type">${session.type}</span>
-            <span class="session-duration">${session.duration} min</span>
-          </div>
-          <button class="btn btn-primary join-button" onclick="joinSession('${session.id}')">
-            <i class="fas fa-sign-in-alt"></i> Join Session
-          </button>
-        `;
+        // Use the renderSessionCard function for consistent styling
+        const card = renderSessionCard(session);
         container.appendChild(card);
       });
     }
@@ -222,11 +360,15 @@
         const res = await fetchWithProtection(`/api/sessions/${sessionId}/join`, {
           method: 'POST'
         });
-        if (!res.ok) throw new Error('Failed to join session');
-        window.open(`session.html?id=${sessionId}`, '_blank');
+        const data = await res.json();
+        if (res.ok) {
+          window.location.href = `/live-session/${sessionId}`;
+        } else {
+          alert(data.error || 'Failed to join session');
+        }
       } catch (err) {
-        console.error('Join session failed:', err);
-        alert('Unable to join session at this time.');
+        alert('Error joining session');
+        console.error('Error:', err);
       }
     }
 
@@ -315,3 +457,4 @@ document.querySelectorAll('.nav-item').forEach(item => {
   </script>
 </body>
 </html>
+l>
