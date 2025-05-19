@@ -207,33 +207,7 @@
    gap: 1rem;
  }
 
- .session-card {
-   background-color: rgba(42, 42, 42, 0.5);
-   border-radius: 1rem;
-   padding: 1.25rem;
-   display: flex;
-   align-items: center;
-   transition: background-color 0.2s ease;
- }
-
- .session-card:hover {
-   background-color: rgba(53, 53, 53, 0.5);
- }
-
- .session-icon {
-   height: 3rem;
-   width: 3rem;
-   border-radius: 0.75rem;
-   background-color: rgba(53, 122, 255, 0.2);
-   display: flex;
-   align-items: center;
-   justify-content: center;
- }
-
- .session-icon i {
-   color: #357AFF;
-   font-size: 1.5rem;
- }
+ 
 
  .session-details {
    margin-left: 1rem;
