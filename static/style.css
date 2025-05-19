@@ -583,9 +583,10 @@ body {
    min-height: 100vh;
    margin-top: 0;
    padding: 2rem;
-   background: var(--background);
+   position: relative; /* Needed for particle positioning */
+   overflow: hidden; /* Keeps particles contained */
+   background: transparent; /* Remove solid background to show particles */
 }
-
 .auth-card {
    background: var(--card-bg);
    padding: 2rem;
@@ -594,6 +595,13 @@ body {
    width: 100%;
    max-width: 400px;
    color: var(--text-color);
+   position: relative;
+   z-index: 1;
+}
+
+.particles-canvas {
+    position: absolute;
+    z-index: 0;
 }
 
 .auth-card h2 {
@@ -602,6 +610,10 @@ body {
    margin-bottom: 0.5rem;
 }
 
+.auth-card {
+    background: rgba(42, 42, 42, 0.8); /* Adjust opacity as needed */
+    backdrop-filter: blur(10px);
+}
 .auth-subtitle {
    text-align: center;
    color: var(--light-text);
